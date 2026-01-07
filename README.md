@@ -27,12 +27,7 @@ Updated UI implementation. In development. README will be updated soon.
 
 ## Roadmap
 
-- [ ] Home stats
 - [ ] Revisions screen
 - [ ] Friends
 - [ ] Settings
 - [ ] UI/UX upgrades
-
-## License
-
-MIT License.
