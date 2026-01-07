@@ -36,6 +36,7 @@ sealed class SubScreen {
     object None : SubScreen()
     object Problems : SubScreen()
     object Streak : SubScreen()
+    object Achievements : SubScreen()
     data class FriendProfile(val friend: Friend) : SubScreen()
 }
 
@@ -46,6 +47,10 @@ fun MainScreen(
     val hazeState = remember { HazeState() }
     var selectedNavItem by remember { mutableStateOf(NavItem.HOME) }
     var currentSubScreen by remember { mutableStateOf<SubScreen>(SubScreen.None) }
+    
+    // Temporary state for passing data to sub-screens
+    var streakData by remember { mutableStateOf<StreakData?>(null) }
+    var achievementsData by remember { mutableStateOf<List<AchievementData>>(emptyList()) }
     
     AnimatedGradientBackground(
         hazeState = hazeState
@@ -68,9 +73,22 @@ fun MainScreen(
                         hazeState = hazeState,
                         onBack = { currentSubScreen = SubScreen.None }
                     )
-                    SubScreen.Streak -> StreakScreen(
+                    SubScreen.Streak -> {
+                        if (streakData != null) {
+                            StreakScreen(
+                                hazeState = hazeState,
+                                onBack = { currentSubScreen = SubScreen.None },
+                                currentStreak = streakData!!.currentStreak,
+                                longestStreak = streakData!!.longestStreak,
+                                totalActiveDays = streakData!!.totalActiveDays,
+                                averagePerWeek = streakData!!.averagePerWeek
+                            )
+                        }
+                    }
+                    SubScreen.Achievements -> AchievementsScreen(
                         hazeState = hazeState,
-                        onBack = { currentSubScreen = SubScreen.None }
+                        onBack = { currentSubScreen = SubScreen.None },
+                        achievements = achievementsData
                     )
                     is SubScreen.FriendProfile -> FriendProfileScreen(
                         friend = subScreen.friend,
@@ -92,7 +110,27 @@ fun MainScreen(
                                     hazeState = hazeState,
                                     onLogout = onLogout,
                                     onNavigateToProblems = { currentSubScreen = SubScreen.Problems },
-                                    onNavigateToStreak = { currentSubScreen = SubScreen.Streak }
+                                    onNavigateToStreak = {
+                                        // Data will be set via callback before navigation
+                                        currentSubScreen = SubScreen.Streak
+                                    },
+                                    onNavigateToAchievements = {
+                                        // Data will be set via callback before navigation
+                                        currentSubScreen = SubScreen.Achievements
+                                    },
+                                    onStreakDataReady = { data ->
+                                        streakData = data
+                                        currentSubScreen = SubScreen.Streak
+                                    },
+                                    onAchievementsDataReady = { data ->
+                                        try {
+                                            achievementsData = data
+                                            currentSubScreen = SubScreen.Achievements
+                                        } catch (e: Exception) {
+                                            e.printStackTrace()
+                                            android.util.Log.e("MainScreen", "Error navigating to achievements: ${e.message}")
+                                        }
+                                    }
                                 )
                                 NavItem.REVISIONS -> RevisionsScreen(hazeState = hazeState)
                                 NavItem.FRIENDS -> FriendsScreen(

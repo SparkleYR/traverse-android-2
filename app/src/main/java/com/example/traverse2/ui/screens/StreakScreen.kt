@@ -60,16 +60,14 @@ data class FriendStreak(
 @Composable
 fun StreakScreen(
     hazeState: HazeState,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    currentStreak: Int = 0,
+    longestStreak: Int = 0,
+    totalActiveDays: Int = 0,
+    averagePerWeek: Float = 0f
 ) {
     val glassColors = TraverseTheme.glassColors
     val scrollState = rememberScrollState()
-    
-    // Mock data
-    val currentStreak = 7
-    val longestStreak = 14
-    val totalActiveDays = 47
-    val averagePerWeek = 4.2f
     
     // Mock streak calendar data
     val today = LocalDate.now()
