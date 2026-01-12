@@ -18,10 +18,6 @@ import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.HazeTint
 import dev.chrisbanes.haze.hazeChild
 
-/**
- * A glassmorphic card component with blur effect
- * Supports both light (pink) and dark (black/white) themes
- */
 @Composable
 fun GlassCard(
     modifier: Modifier = Modifier,
@@ -31,7 +27,6 @@ fun GlassCard(
 ) {
     val glassColors = TraverseTheme.glassColors
     
-    // Theme-aware glass style with prominent blur in dark mode
     val glassStyle = HazeStyle(
         backgroundColor = if (glassColors.isDark) Color.Black else Color.White,
         blurRadius = if (glassColors.isDark) 50.dp else 40.dp,
@@ -44,7 +39,6 @@ fun GlassCard(
         noiseFactor = if (glassColors.isDark) 0.04f else 0.02f
     )
     
-    // Theme-aware border
     val borderColor = if (glassColors.isDark) 
         Color.White.copy(alpha = 0.2f) 
     else 
@@ -66,9 +60,6 @@ fun GlassCard(
     )
 }
 
-/**
- * Simple glass card without haze (for when blur source isn't available)
- */
 @Composable
 fun SimpleGlassCard(
     modifier: Modifier = Modifier,

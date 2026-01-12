@@ -92,6 +92,39 @@ interface TraverseApi {
     
     @GET("submissions/stats/summary")
     suspend fun getSubmissionStats(): Response<SubmissionStatsResponse>
+    
+    // ========== REVISIONS ==========
+    
+    @GET("revisions")
+    suspend fun getRevisions(
+        @Query("upcoming") upcoming: Boolean? = null,
+        @Query("overdue") overdue: Boolean? = null,
+        @Query("limit") limit: Int = 50,
+        @Query("offset") offset: Int = 0,
+        @Query("type") type: String = "normal"
+    ): Response<RevisionsResponse>
+    
+    @GET("revisions/grouped")
+    suspend fun getRevisionsGrouped(
+        @Query("includeCompleted") includeCompleted: Boolean = false,
+        @Query("type") type: String = "normal"
+    ): Response<RevisionsGroupedResponse>
+    
+    @GET("revisions/stats")
+    suspend fun getRevisionStats(
+        @Query("type") type: String = "normal"
+    ): Response<RevisionStatsResponse>
+    
+    @POST("revisions/{id}/complete")
+    suspend fun completeRevision(
+        @Path("id") revisionId: Int
+    ): Response<RevisionCompleteResponse>
+    
+    @POST("revisions/{id}/attempt")
+    suspend fun recordRevisionAttempt(
+        @Path("id") revisionId: Int,
+        @Body attemptData: RevisionAttemptRequest
+    ): Response<RevisionAttemptResponse>
 }
 
 // Additional response models
@@ -259,4 +292,86 @@ data class SubmissionStats(
 data class LanguageStat(
     val language: String,
     val count: Int
+)
+
+// ========== REVISIONS MODELS ==========
+
+@kotlinx.serialization.Serializable
+data class RevisionsResponse(
+    val revisions: List<RevisionItem>,
+    val pagination: PaginationInfo
+)
+
+@kotlinx.serialization.Serializable
+data class RevisionItem(
+    val id: Int,
+    val revisionNumber: Int,
+    val scheduledFor: String,
+    val completedAt: String? = null,
+    val type: String,
+    val problem: Problem,
+    val solve: RevisionSolve
+)
+
+@kotlinx.serialization.Serializable
+data class RevisionSolve(
+    val id: Int,
+    val xpAwarded: Int,
+    val solvedAt: String
+)
+
+@kotlinx.serialization.Serializable
+data class RevisionsGroupedResponse(
+    val groups: List<RevisionGroup>
+)
+
+@kotlinx.serialization.Serializable
+data class RevisionGroup(
+    val date: String,
+    val revisions: List<RevisionItem>,
+    val count: Int
+)
+
+@kotlinx.serialization.Serializable
+data class RevisionStatsResponse(
+    val total: Int,
+    val completed: Int,
+    val overdue: Int,
+    val dueToday: Int,
+    val completionRate: Int
+)
+
+@kotlinx.serialization.Serializable
+data class RevisionCompleteResponse(
+    val message: String,
+    val revision: RevisionItem
+)
+
+@kotlinx.serialization.Serializable
+data class RevisionAttemptRequest(
+    val outcome: Int, // 0 = failed, 1 = success
+    val numTries: Int,
+    val timeSpentMinutes: Int
+)
+
+@kotlinx.serialization.Serializable
+data class RevisionAttemptResponse(
+    val attempt: RevisionAttemptData,
+    val nextRevision: RevisionItem?,
+    val prediction: MLPrediction
+)
+
+@kotlinx.serialization.Serializable
+data class RevisionAttemptData(
+    val id: Int,
+    val attemptNumber: Int,
+    val outcome: Int,
+    val numTries: Int,
+    val timeSpentMinutes: Int
+)
+
+@kotlinx.serialization.Serializable
+data class MLPrediction(
+    val next_review_interval_days: Float,
+    val confidence: String
 )

@@ -127,24 +127,24 @@ class StreakService : Service() {
         // Build the notification content based on streak status
         val (title, content) = when {
             currentStreak == 0 -> Pair(
-                "🎯 Start Your Streak!",
+                "Start Your Streak!",
                 "Solve a problem today to begin"
             )
             hoursRemaining <= 2 -> Pair(
-                "⚠️ $currentStreak Day Streak - Expiring Soon!",
+                "$currentStreak Day Streak - Expiring Soon!",
                 "Only ${hoursRemaining}h left! Solve a problem now"
             )
             hoursRemaining <= 6 -> Pair(
-                "🔥 $currentStreak Day Streak",
+                "$currentStreak Day Streak",
                 "${hoursRemaining}h remaining to maintain streak"
             )
             else -> Pair(
-                "🔥 $currentStreak Day Streak",
+                "$currentStreak Day Streak",
                 "Keep it going! ${hoursRemaining}h until deadline"
             )
         }
         
-        val emoji = if (currentStreak == 0) "🎯" else if (hoursRemaining <= 2) "⚠️" else "🔥"
+        val emoji = if (currentStreak == 0) "" else if (hoursRemaining <= 2) "" else ""
         
         val builder = NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_launcher_foreground)  // Use app icon

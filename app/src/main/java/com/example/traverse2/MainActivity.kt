@@ -15,13 +15,16 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.example.traverse2.data.api.RetrofitClient
 import com.example.traverse2.service.StreakService
 import com.example.traverse2.ui.screens.LoginScreen
 import com.example.traverse2.ui.screens.MainScreen
 import com.example.traverse2.ui.theme.TraverseTheme
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     
@@ -70,13 +73,48 @@ class MainActivity : ComponentActivity() {
     }
     
     private fun startStreakService() {
-        // Start streak notification service with mock data
-        // In production, this would fetch real streak data
-        StreakService.startService(
-            context = this,
-            streakCount = 7,
-            nextDeadlineHours = 18
-        )
+        // Fetch streak data from backend and start service
+        lifecycleScope.launch {
+            try {
+                val response = RetrofitClient.api.getCurrentUser()
+                if (response.isSuccessful) {
+                    val user = response.body()?.user
+                    if (user != null) {
+                        // Calculate hours remaining until streak expires (24 hours from now)
+                        // In a real implementation, this should come from the backend
+                        // which tracks the last solve time
+                        val hoursRemaining = 24  // Placeholder - should be calculated from last solve time
+                        
+                        StreakService.startService(
+                            context = this@MainActivity,
+                            streakCount = user.currentStreak,
+                            nextDeadlineHours = hoursRemaining
+                        )
+                    } else {
+                        // User not logged in, start with default
+                        StreakService.startService(
+                            context = this@MainActivity,
+                            streakCount = 0,
+                            nextDeadlineHours = 24
+                        )
+                    }
+                } else {
+                    // Failed to fetch user data, start with default
+                    StreakService.startService(
+                        context = this@MainActivity,
+                        streakCount = 0,
+                        nextDeadlineHours = 24
+                    )
+                }
+            } catch (e: Exception) {
+                // Network error, start with default
+                StreakService.startService(
+                    context = this@MainActivity,
+                    streakCount = 0,
+                    nextDeadlineHours = 24
+                )
+            }
+        }
     }
 }
 

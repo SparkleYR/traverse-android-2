@@ -16,7 +16,6 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
-// Custom colors for glassmorphism
 data class GlassColors(
     val glass: Color,
     val glassBorder: Color,

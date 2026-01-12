@@ -86,7 +86,7 @@ fun GlassBottomBar(
     
     val borderColor = if (glassColors.isDark) 
         Color.White.copy(alpha = 0.15f) 
-    else 
+    else
         Color.Black.copy(alpha = 0.08f)
     
     Box(

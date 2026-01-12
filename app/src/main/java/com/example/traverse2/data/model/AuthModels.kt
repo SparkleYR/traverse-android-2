@@ -33,7 +33,8 @@ data class User(
     val currentStreak: Int = 0,
     val longestStreak: Int = 0,
     val totalXp: Int = 0,
-    val createdAt: String? = null
+    val createdAt: String? = null,
+    val isSubscriptionActive: Boolean = false
 )
 
 @Serializable
