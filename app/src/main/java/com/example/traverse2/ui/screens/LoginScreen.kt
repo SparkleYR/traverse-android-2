@@ -60,6 +60,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory
+import androidx.compose.ui.platform.LocalContext
 import com.example.traverse2.ui.components.AnimatedGradientBackground
 import com.example.traverse2.ui.components.GlassButton
 import com.example.traverse2.ui.components.GlassCard
@@ -81,7 +83,11 @@ enum class AuthScreen {
 @Composable
 fun LoginScreen(
     onLoginSuccess: () -> Unit,
-    viewModel: AuthViewModel = viewModel()
+    viewModel: AuthViewModel = viewModel(
+        factory = AndroidViewModelFactory.getInstance(
+            LocalContext.current.applicationContext as android.app.Application
+        )
+    )
 ) {
     val hazeState = remember { HazeState() }
     val glassColors = TraverseTheme.glassColors

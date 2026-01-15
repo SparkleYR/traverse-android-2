@@ -12,31 +12,47 @@ import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.example.traverse2.data.SessionManager
 import com.example.traverse2.data.api.RetrofitClient
 import com.example.traverse2.service.StreakService
 import com.example.traverse2.ui.screens.LoginScreen
 import com.example.traverse2.ui.screens.MainScreen
 import com.example.traverse2.ui.theme.TraverseTheme
 import kotlinx.coroutines.launch
+import java.time.ZonedDateTime
+import java.time.temporal.ChronoUnit
 
 class MainActivity : ComponentActivity() {
-    
+
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted: Boolean ->
         if (isGranted) {
-            // Permission granted, start the streak service
             startStreakService()
         }
     }
-    
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -50,7 +66,7 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
-    
+
     private fun requestNotificationPermissionAndStartService() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             when {
@@ -58,40 +74,47 @@ class MainActivity : ComponentActivity() {
                     this,
                     Manifest.permission.POST_NOTIFICATIONS
                 ) == PackageManager.PERMISSION_GRANTED -> {
-                    // Permission already granted
                     startStreakService()
                 }
                 else -> {
-                    // Request permission
                     requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                 }
             }
         } else {
-            // No runtime permission needed for older Android versions
             startStreakService()
         }
     }
-    
+
     private fun startStreakService() {
-        // Fetch streak data from backend and start service
         lifecycleScope.launch {
             try {
                 val response = RetrofitClient.api.getCurrentUser()
                 if (response.isSuccessful) {
                     val user = response.body()?.user
                     if (user != null) {
-                        // Calculate hours remaining until streak expires (24 hours from now)
-                        // In a real implementation, this should come from the backend
-                        // which tracks the last solve time
-                        val hoursRemaining = 24  // Placeholder - should be calculated from last solve time
-                        
+                        val hoursRemaining = try {
+                            val solvesResponse = RetrofitClient.api.getMySolves(limit = 1, offset = 0)
+                            if (solvesResponse.isSuccessful) {
+                                val solves = solvesResponse.body()?.solves
+                                if (!solves.isNullOrEmpty()) {
+                                    val lastSolveTime = solves.first().solvedAt
+                                    calculateHoursRemaining(lastSolveTime)
+                                } else {
+                                    24
+                                }
+                            } else {
+                                24
+                            }
+                        } catch (e: Exception) {
+                            24
+                        }
+
                         StreakService.startService(
                             context = this@MainActivity,
                             streakCount = user.currentStreak,
                             nextDeadlineHours = hoursRemaining
                         )
                     } else {
-                        // User not logged in, start with default
                         StreakService.startService(
                             context = this@MainActivity,
                             streakCount = 0,
@@ -99,7 +122,6 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                 } else {
-                    // Failed to fetch user data, start with default
                     StreakService.startService(
                         context = this@MainActivity,
                         streakCount = 0,
@@ -107,7 +129,6 @@ class MainActivity : ComponentActivity() {
                     )
                 }
             } catch (e: Exception) {
-                // Network error, start with default
                 StreakService.startService(
                     context = this@MainActivity,
                     streakCount = 0,
@@ -116,15 +137,97 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
+    private fun calculateHoursRemaining(lastSolveTimeStr: String): Int {
+        return try {
+            val lastSolveTime = ZonedDateTime.parse(lastSolveTimeStr)
+            val now = ZonedDateTime.now()
+            val endOfDay = now.toLocalDate().plusDays(1).atStartOfDay(now.zone)
+            val hoursUntilMidnight = ChronoUnit.HOURS.between(now, endOfDay).toInt()
+            hoursUntilMidnight.coerceIn(1, 24)
+        } catch (e: Exception) {
+            24
+        }
+    }
+}
+
+sealed class AuthState {
+    object Loading : AuthState()
+    object LoggedOut : AuthState()
+    object LoggedIn : AuthState()
 }
 
 @Composable
 fun TraverseApp(onLoginSuccess: () -> Unit = {}) {
+    val context = LocalContext.current
+    val sessionManager = remember { SessionManager.getInstance(context) }
     val navController = rememberNavController()
-    
+
+    var authState by remember { mutableStateOf<AuthState>(AuthState.Loading) }
+    var hasNavigated by remember { mutableStateOf(false) }
+
+    // Check auth state on launch
+    LaunchedEffect(Unit) {
+        val isLoggedIn = sessionManager.isLoggedInSync()
+        if (isLoggedIn) {
+            // Verify session is still valid with backend
+            try {
+                val response = RetrofitClient.api.getCurrentUser()
+                if (response.isSuccessful && response.body() != null) {
+                    authState = AuthState.LoggedIn
+                } else {
+                    // Session expired - clear it
+                    sessionManager.clearSession()
+                    RetrofitClient.clearCookies()
+                    authState = AuthState.LoggedOut
+                }
+            } catch (e: Exception) {
+                // Network error - assume still logged in (offline mode)
+                authState = AuthState.LoggedIn
+            }
+        } else {
+            authState = AuthState.LoggedOut
+        }
+    }
+
+    // Handle navigation based on auth state
+    LaunchedEffect(authState) {
+        if (authState != AuthState.Loading && !hasNavigated) {
+            hasNavigated = true
+            when (authState) {
+                AuthState.LoggedIn -> {
+                    navController.navigate("home") {
+                        popUpTo("login") { inclusive = true }
+                    }
+                    onLoginSuccess()
+                }
+                AuthState.LoggedOut -> {
+                    // Already at login, do nothing
+                }
+                AuthState.Loading -> { }
+            }
+        }
+    }
+
+    // Show loading while checking auth
+    if (authState == AuthState.Loading) {
+        val isDark = TraverseTheme.glassColors.isDark
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(if (isDark) Color.Black else Color(0xFFFDF2F8)),
+            contentAlignment = Alignment.Center
+        ) {
+            CircularProgressIndicator(color = TraverseTheme.glassColors.textPrimary)
+        }
+        return
+    }
+
+    val startDestination = if (authState == AuthState.LoggedIn) "home" else "login"
+
     NavHost(
         navController = navController,
-        startDestination = "login",
+        startDestination = startDestination,
         enterTransition = {
             fadeIn(animationSpec = tween(300)) +
                 slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Start, tween(300))
@@ -152,10 +255,11 @@ fun TraverseApp(onLoginSuccess: () -> Unit = {}) {
                 }
             )
         }
-        
+
         composable("home") {
             MainScreen(
                 onLogout = {
+                    // Navigate first, then the logout happens in SettingsScreen
                     navController.navigate("login") {
                         popUpTo("home") { inclusive = true }
                     }

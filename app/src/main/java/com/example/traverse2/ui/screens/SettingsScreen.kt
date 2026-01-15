@@ -57,26 +57,49 @@ import androidx.compose.ui.unit.sp
 import com.example.traverse2.ui.theme.GlassColors
 import com.example.traverse2.ui.theme.ThemeState
 import com.example.traverse2.ui.theme.TraverseTheme
+import com.example.traverse2.data.SessionManager
+import com.example.traverse2.data.api.RetrofitClient
+import com.example.traverse2.data.model.User
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.HazeTint
 import dev.chrisbanes.haze.hazeChild
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
 
 @Composable
 fun SettingsScreen(
     hazeState: HazeState,
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    user: User? = null,
+    onEditProfile: () -> Unit = {}
 ) {
     val glassColors = TraverseTheme.glassColors
     val scrollState = rememberScrollState()
     val context = LocalContext.current
-    
-    // Mock user data
-    val username = "yasha"
-    val email = "yasha@example.com"
-    val dayStreak = 7
-    val totalXp = 680
-    
+    val scope = rememberCoroutineScope()
+    val sessionManager = SessionManager.getInstance(context)
+
+    // Use actual user data or fallback to defaults
+    val username = user?.displayName ?: user?.username ?: "User"
+    val email = user?.email ?: "Not available"
+    val dayStreak = user?.currentStreak ?: 0
+    val totalXp = user?.totalXp ?: 0
+
+    // Logout handler that clears session properly
+    val handleLogout: () -> Unit = {
+        scope.launch {
+            try {
+                RetrofitClient.api.logout()
+            } catch (e: Exception) {
+                // Ignore network errors
+            }
+            sessionManager.clearSession()
+            RetrofitClient.clearCookies()
+            onLogout()
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -118,7 +141,8 @@ fun SettingsScreen(
         AccountActionsCard(
             hazeState = hazeState,
             glassColors = glassColors,
-            onLogout = onLogout
+            onLogout = handleLogout,
+            onEditProfile = onEditProfile
         )
         
         Spacer(modifier = Modifier.height(20.dp))
@@ -458,7 +482,8 @@ private fun ThemeOptionCard(
 private fun AccountActionsCard(
     hazeState: HazeState,
     glassColors: GlassColors,
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    onEditProfile: () -> Unit = {}
 ) {
     GlassCard(hazeState = hazeState, glassColors = glassColors) {
         Column {
@@ -468,9 +493,9 @@ private fun AccountActionsCard(
                 fontWeight = FontWeight.SemiBold,
                 color = glassColors.textPrimary
             )
-            
+
             Spacer(modifier = Modifier.height(16.dp))
-            
+
             // Edit Profile
             ActionItem(
                 icon = Icons.Default.Edit,
@@ -478,23 +503,11 @@ private fun AccountActionsCard(
                 subtitle = "Update your information",
                 iconColor = if (glassColors.isDark) Color.White else Color(0xFFE91E8C),
                 glassColors = glassColors,
-                onClick = { /* TODO: Navigate to edit profile */ }
+                onClick = onEditProfile
             )
-            
+
             Spacer(modifier = Modifier.height(12.dp))
-            
-            // Security
-            ActionItem(
-                icon = Icons.Default.Lock,
-                title = "Security",
-                subtitle = "Change password",
-                iconColor = if (glassColors.isDark) Color.White else Color(0xFF6366F1),
-                glassColors = glassColors,
-                onClick = { /* TODO: Navigate to security */ }
-            )
-            
-            Spacer(modifier = Modifier.height(12.dp))
-            
+
             // Logout
             ActionItem(
                 icon = Icons.AutoMirrored.Filled.Logout,

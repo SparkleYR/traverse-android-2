@@ -10,6 +10,7 @@ import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
+import retrofit2.http.PATCH
 import retrofit2.http.POST
 import retrofit2.http.PUT
 import retrofit2.http.Path
@@ -30,17 +31,20 @@ interface TraverseApi {
     
     @GET("auth/me")
     suspend fun getCurrentUser(): Response<UserResponse>
-    
+
+    @PATCH("auth/profile")
+    suspend fun updateProfile(@Body request: UpdateProfileRequest): Response<UpdateProfileResponse>
+
+    @POST("auth/change-password")
+    suspend fun changePassword(@Body request: ChangePasswordRequest): Response<MessageResponse>
+
+    @DELETE("auth/account")
+    suspend fun deleteAccount(@Body request: DeleteAccountRequest): Response<MessageResponse>
+
     // ========== USERS ==========
     
     @GET("users/{username}")
     suspend fun getUserProfile(@Path("username") username: String): Response<UserProfile>
-    
-    @PUT("users/me")
-    suspend fun updateProfile(@Body updates: Map<String, String>): Response<User>
-    
-    @DELETE("users/me")
-    suspend fun deleteAccount(): Response<Unit>
     
     // ========== SOLVES ==========
     
@@ -54,24 +58,79 @@ interface TraverseApi {
     suspend fun getSolveStats(): Response<SolveStatsResponse>
     
     // ========== FRIENDS ==========
-    
+
     @GET("friends")
-    suspend fun getFriends(): Response<List<FriendResponse>>
-    
-    @GET("friends/requests")
-    suspend fun getFriendRequests(): Response<FriendRequestsResponse>
-    
-    @POST("friends/request/{username}")
-    suspend fun sendFriendRequest(@Path("username") username: String): Response<Unit>
-    
-    @POST("friends/accept/{requestId}")
-    suspend fun acceptFriendRequest(@Path("requestId") requestId: Int): Response<Unit>
-    
-    @POST("friends/reject/{requestId}")
-    suspend fun rejectFriendRequest(@Path("requestId") requestId: Int): Response<Unit>
-    
-    @DELETE("friends/{friendshipId}")
-    suspend fun removeFriend(@Path("friendshipId") friendshipId: Int): Response<Unit>
+    suspend fun getFriends(): Response<FriendsListResponse>
+
+    // Friend Requests
+    @POST("friends/request")
+    suspend fun sendFriendRequest(@Body request: FriendRequestBody): Response<FriendRequestResponse>
+
+    @GET("friends/requests/received")
+    suspend fun getReceivedFriendRequests(): Response<List<ReceivedFriendRequest>>
+
+    @GET("friends/requests/sent")
+    suspend fun getSentFriendRequests(): Response<List<SentFriendRequest>>
+
+    @POST("friends/requests/{requestId}/accept")
+    suspend fun acceptFriendRequest(@Path("requestId") requestId: Int): Response<AcceptFriendResponse>
+
+    @POST("friends/requests/{requestId}/reject")
+    suspend fun rejectFriendRequest(@Path("requestId") requestId: Int): Response<MessageResponse>
+
+    @DELETE("friends/requests/{requestId}")
+    suspend fun cancelFriendRequest(@Path("requestId") requestId: Int): Response<MessageResponse>
+
+    @DELETE("friends/{username}")
+    suspend fun removeFriend(@Path("username") username: String): Response<MessageResponse>
+
+    // Friend Profile Endpoints
+    @GET("friends/{username}/solves")
+    suspend fun getFriendSolves(
+        @Path("username") username: String,
+        @Query("limit") limit: Int = 50,
+        @Query("offset") offset: Int = 0
+    ): Response<FriendSolvesResponse>
+
+    @GET("friends/{username}/stats")
+    suspend fun getFriendStats(@Path("username") username: String): Response<FriendStatsResponse>
+
+    @GET("friends/{username}/achievements")
+    suspend fun getFriendAchievements(@Path("username") username: String): Response<FriendAchievementsResponse>
+
+    // ========== FRIEND STREAKS ==========
+
+    @GET("friend-streaks")
+    suspend fun getFriendStreaks(): Response<List<FriendStreakItem>>
+
+    @POST("friend-streaks/request")
+    suspend fun sendFriendStreakRequest(@Body request: FriendStreakRequestBody): Response<FriendStreakRequestResponse>
+
+    @GET("friend-streaks/requests/received")
+    suspend fun getReceivedStreakRequests(): Response<List<ReceivedStreakRequest>>
+
+    @GET("friend-streaks/requests/sent")
+    suspend fun getSentStreakRequests(): Response<List<SentStreakRequest>>
+
+    @POST("friend-streaks/requests/{requestId}/accept")
+    suspend fun acceptStreakRequest(@Path("requestId") requestId: Int): Response<AcceptStreakResponse>
+
+    @POST("friend-streaks/requests/{requestId}/reject")
+    suspend fun rejectStreakRequest(@Path("requestId") requestId: Int): Response<MessageResponse>
+
+    @DELETE("friend-streaks/requests/{requestId}")
+    suspend fun cancelStreakRequest(@Path("requestId") requestId: Int): Response<MessageResponse>
+
+    @DELETE("friend-streaks/{username}")
+    suspend fun deleteFriendStreak(@Path("username") username: String): Response<MessageResponse>
+
+    // ========== USER SEARCH ==========
+
+    @GET("users")
+    suspend fun searchUsers(
+        @Query("q") query: String,
+        @Query("limit") limit: Int = 10
+    ): Response<UsersSearchResponse>
     
     // ========== ACHIEVEMENTS ==========
     
@@ -181,25 +240,206 @@ data class DifficultyStats(
     val hard: Int = 0
 )
 
+// ========== FRIENDS MODELS ==========
+
 @kotlinx.serialization.Serializable
-data class FriendResponse(
-    val friendshipId: Int,
-    val friend: UserProfile,
-    val since: String
+data class FriendsListResponse(
+    val friends: List<FriendItem>
 )
 
 @kotlinx.serialization.Serializable
-data class FriendRequestsResponse(
-    val received: List<FriendRequestItem>,
-    val sent: List<FriendRequestItem>
-)
-
-@kotlinx.serialization.Serializable
-data class FriendRequestItem(
+data class FriendItem(
+    val friendshipId: String,
+    val friendedAt: String? = null,
     val id: Int,
-    val from: UserProfile? = null,
-    val to: UserProfile? = null,
+    val username: String,
+    val currentStreak: Int = 0,
+    val totalXp: Int = 0,
+    val visibility: String = "public"
+)
+
+@kotlinx.serialization.Serializable
+data class FriendRequestBody(
+    val username: String
+)
+
+@kotlinx.serialization.Serializable
+data class FriendRequestResponse(
+    val friendRequest: FriendRequestDetail
+)
+
+@kotlinx.serialization.Serializable
+data class FriendRequestDetail(
+    val id: Int,
+    val requesterId: Int,
+    val requestedId: Int,
+    val status: String,
+    val createdAt: String,
+    val requester: FriendUserInfo,
+    val requested: FriendUserInfo
+)
+
+@kotlinx.serialization.Serializable
+data class FriendUserInfo(
+    val id: Int,
+    val username: String,
+    val currentStreak: Int = 0,
+    val totalXp: Int = 0
+)
+
+@kotlinx.serialization.Serializable
+data class ReceivedFriendRequest(
+    val id: Int,
+    val requester: FriendUserInfo,
     val createdAt: String
+)
+
+@kotlinx.serialization.Serializable
+data class SentFriendRequest(
+    val id: Int,
+    val addressee: FriendUserInfo,
+    val createdAt: String
+)
+
+@kotlinx.serialization.Serializable
+data class AcceptFriendResponse(
+    val message: String,
+    val friendRequest: FriendRequestStatusUpdate
+)
+
+@kotlinx.serialization.Serializable
+data class FriendRequestStatusUpdate(
+    val id: Int,
+    val status: String
+)
+
+// Friend Profile Models
+@kotlinx.serialization.Serializable
+data class FriendSolvesResponse(
+    val solves: List<FriendSolveItem>,
+    val pagination: PaginationInfo
+)
+
+@kotlinx.serialization.Serializable
+data class FriendSolveItem(
+    val id: Int,
+    val problem: Problem,
+    val submission: FriendSubmissionInfo? = null,
+    val highlights: List<FriendHighlight> = emptyList(),
+    val xpAwarded: Int,
+    val solvedAt: String
+)
+
+@kotlinx.serialization.Serializable
+data class FriendSubmissionInfo(
+    val language: String,
+    val happenedAt: String
+)
+
+@kotlinx.serialization.Serializable
+data class FriendHighlight(
+    val id: Int,
+    val content: String,
+    val notes: String? = null,
+    val tags: List<String> = emptyList()
+)
+
+@kotlinx.serialization.Serializable
+data class FriendStatsResponse(
+    val currentStreak: Int,
+    val totalXp: Int,
+    val totalSolves: Int,
+    val totalSubmissions: Int,
+    val totalStreakDays: Int,
+    val byDifficulty: Map<String, Int> = emptyMap()
+)
+
+@kotlinx.serialization.Serializable
+data class FriendAchievementsResponse(
+    val achievements: List<FriendAchievementItem>
+)
+
+@kotlinx.serialization.Serializable
+data class FriendAchievementItem(
+    val id: Int,
+    val key: String,
+    val name: String,
+    val description: String,
+    val category: String,
+    val unlockedAt: String
+)
+
+// ========== FRIEND STREAKS MODELS ==========
+
+@kotlinx.serialization.Serializable
+data class FriendStreakItem(
+    val friend: FriendUserInfo,
+    val currentStreak: Int,
+    val longestStreak: Int,
+    val lastIncrementDate: String? = null,
+    val createdAt: String
+)
+
+@kotlinx.serialization.Serializable
+data class FriendStreakRequestBody(
+    val username: String
+)
+
+@kotlinx.serialization.Serializable
+data class FriendStreakRequestResponse(
+    val streakRequest: StreakRequestDetail
+)
+
+@kotlinx.serialization.Serializable
+data class StreakRequestDetail(
+    val id: Int,
+    val requesterId: Int,
+    val requestedId: Int,
+    val status: String,
+    val createdAt: String
+)
+
+@kotlinx.serialization.Serializable
+data class ReceivedStreakRequest(
+    val id: Int,
+    val requester: FriendUserInfo,
+    val createdAt: String
+)
+
+@kotlinx.serialization.Serializable
+data class SentStreakRequest(
+    val id: Int,
+    val addressee: FriendUserInfo,
+    val createdAt: String
+)
+
+@kotlinx.serialization.Serializable
+data class AcceptStreakResponse(
+    val message: String,
+    val friendStreak: FriendStreakCreated
+)
+
+@kotlinx.serialization.Serializable
+data class FriendStreakCreated(
+    val userId1: Int,
+    val userId2: Int,
+    val currentStreak: Int,
+    val longestStreak: Int
+)
+
+// ========== USER SEARCH MODELS ==========
+
+@kotlinx.serialization.Serializable
+data class UsersSearchResponse(
+    val users: List<UserSearchResult>
+)
+
+@kotlinx.serialization.Serializable
+data class UserSearchResult(
+    val id: Int,
+    val username: String,
+    val currentStreak: Int = 0,
+    val totalXp: Int = 0
 )
 
 @kotlinx.serialization.Serializable
@@ -374,4 +614,35 @@ data class RevisionAttemptData(
 data class MLPrediction(
     val next_review_interval_days: Float,
     val confidence: String
+)
+
+// ========== PROFILE UPDATE MODELS ==========
+
+@kotlinx.serialization.Serializable
+data class UpdateProfileRequest(
+    val email: String? = null,
+    val timezone: String? = null,
+    val visibility: String? = null
+)
+
+@kotlinx.serialization.Serializable
+data class UpdateProfileResponse(
+    val message: String,
+    val user: com.example.traverse2.data.model.User
+)
+
+@kotlinx.serialization.Serializable
+data class ChangePasswordRequest(
+    val currentPassword: String,
+    val newPassword: String
+)
+
+@kotlinx.serialization.Serializable
+data class MessageResponse(
+    val message: String
+)
+
+@kotlinx.serialization.Serializable
+data class DeleteAccountRequest(
+    val password: String
 )

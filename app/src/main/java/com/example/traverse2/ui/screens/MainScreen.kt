@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -25,10 +26,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.traverse2.data.api.FriendItem
 import com.example.traverse2.ui.components.AnimatedGradientBackground
 import com.example.traverse2.ui.components.GlassBottomBar
 import com.example.traverse2.ui.components.NavItem
 import com.example.traverse2.ui.theme.TraverseTheme
+import com.example.traverse2.ui.viewmodel.FriendsViewModel
+import com.example.traverse2.ui.viewmodel.HomeViewModel
 import dev.chrisbanes.haze.HazeState
 
 // Sub-screens that can be navigated to from main tabs
@@ -37,7 +42,8 @@ sealed class SubScreen {
     object Problems : SubScreen()
     object Streak : SubScreen()
     object Achievements : SubScreen()
-    data class FriendProfile(val friend: Friend) : SubScreen()
+    object EditProfile : SubScreen()
+    data class FriendProfile(val friend: FriendItem) : SubScreen()
 }
 
 @Composable
@@ -47,7 +53,15 @@ fun MainScreen(
     val hazeState = remember { HazeState() }
     var selectedNavItem by remember { mutableStateOf(NavItem.HOME) }
     var currentSubScreen by remember { mutableStateOf<SubScreen>(SubScreen.None) }
-    
+
+    // Shared HomeViewModel for user data
+    val homeViewModel: HomeViewModel = viewModel()
+    val homeUiState by homeViewModel.uiState.collectAsState()
+
+    // Shared FriendsViewModel for friends data
+    val friendsViewModel: FriendsViewModel = viewModel()
+    val friendsUiState by friendsViewModel.uiState.collectAsState()
+
     // Temporary state for passing data to sub-screens
     var streakData by remember { mutableStateOf<StreakData?>(null) }
     var achievementsData by remember { mutableStateOf<List<AchievementData>>(emptyList()) }
@@ -81,7 +95,8 @@ fun MainScreen(
                                 currentStreak = streakData!!.currentStreak,
                                 longestStreak = streakData!!.longestStreak,
                                 totalActiveDays = streakData!!.totalActiveDays,
-                                averagePerWeek = streakData!!.averagePerWeek
+                                averagePerWeek = streakData!!.averagePerWeek,
+                                friends = friendsUiState.friends
                             )
                         }
                     }
@@ -93,7 +108,16 @@ fun MainScreen(
                     is SubScreen.FriendProfile -> FriendProfileScreen(
                         friend = subScreen.friend,
                         hazeState = hazeState,
-                        onBack = { currentSubScreen = SubScreen.None }
+                        onBack = { currentSubScreen = SubScreen.None },
+                        viewModel = friendsViewModel
+                    )
+                    SubScreen.EditProfile -> EditProfileScreen(
+                        hazeState = hazeState,
+                        user = homeUiState.user,
+                        onBack = { currentSubScreen = SubScreen.None },
+                        onProfileUpdated = { updatedUser ->
+                            homeViewModel.refresh()
+                        }
                     )
                     SubScreen.None -> {
                         // Main tab content
@@ -130,18 +154,22 @@ fun MainScreen(
                                             e.printStackTrace()
                                             android.util.Log.e("MainScreen", "Error navigating to achievements: ${e.message}")
                                         }
-                                    }
+                                    },
+                                    viewModel = homeViewModel
                                 )
                                 NavItem.REVISIONS -> RevisionsScreen(hazeState = hazeState)
                                 NavItem.FRIENDS -> FriendsScreen(
                                     hazeState = hazeState,
-                                    onFriendClick = { friend -> 
+                                    onFriendClick = { friend ->
                                         currentSubScreen = SubScreen.FriendProfile(friend)
-                                    }
+                                    },
+                                    viewModel = friendsViewModel
                                 )
                                 NavItem.SETTINGS -> SettingsScreen(
                                     hazeState = hazeState,
-                                    onLogout = onLogout
+                                    onLogout = onLogout,
+                                    user = homeUiState.user,
+                                    onEditProfile = { currentSubScreen = SubScreen.EditProfile }
                                 )
                             }
                         }

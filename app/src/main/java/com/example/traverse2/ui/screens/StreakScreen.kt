@@ -39,6 +39,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.traverse2.data.api.FriendItem
 import com.example.traverse2.ui.components.GlassTopBar
 import com.example.traverse2.ui.components.StreakCalendar
 import com.example.traverse2.ui.components.StreakDay
@@ -64,11 +65,12 @@ fun StreakScreen(
     currentStreak: Int = 0,
     longestStreak: Int = 0,
     totalActiveDays: Int = 0,
-    averagePerWeek: Float = 0f
+    averagePerWeek: Float = 0f,
+    friends: List<FriendItem> = emptyList()
 ) {
     val glassColors = TraverseTheme.glassColors
     val scrollState = rememberScrollState()
-    
+
     // Mock streak calendar data
     val today = LocalDate.now()
     val streakDays = remember {
@@ -88,14 +90,17 @@ fun StreakScreen(
         }
     }
     
-    // Mock friend streaks
-    val friendStreaks = listOf(
-        FriendStreak("alexcoder", "Alex Chen", 12, true),
-        FriendStreak("sarahdev", "Sarah Dev", 8, true),
-        FriendStreak("mikeprog", "Mike P.", 5, false),
-        FriendStreak("emmatech", "Emma Tech", 3, true),
-        FriendStreak("johnsmith", "John S.", 0, false)
-    )
+    // Convert FriendItem to FriendStreak for display
+    val friendStreaks = remember(friends) {
+        friends.map { friend ->
+            FriendStreak(
+                username = friend.username,
+                displayName = friend.username, // Backend doesn't provide displayName
+                streak = friend.currentStreak,
+                isActive = friend.currentStreak > 0 // Consider active if they have a streak
+            )
+        }.sortedByDescending { it.streak }
+    }
     
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
