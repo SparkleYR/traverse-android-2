@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AcUnit
 import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -51,7 +52,8 @@ import java.util.Locale
 data class StreakDay(
     val date: LocalDate,
     val isActive: Boolean,  // true = solved problem that day
-    val isToday: Boolean = false
+    val isToday: Boolean = false,
+    val isFrozen: Boolean = false  // true = streak freeze was used that day
 )
 
 @Composable
@@ -102,16 +104,7 @@ fun StreakCalendar(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(24.dp))
-            .hazeChild(
-                state = hazeState,
-                style = HazeStyle(
-                    backgroundColor = cardBackground,
-                    blurRadius = 24.dp,
-                    tint = HazeTint(cardTint),
-                    noiseFactor = 0.02f
-                )
-            )
-            .background(if (glassColors.isDark) Color(0x15FFFFFF) else Color(0x40FFFFFF))
+            .background(if (glassColors.isDark) Color(0xFF1C1C1E) else Color(0xFFF2F2F7))
             .padding(20.dp)
     ) {
         Column {
@@ -125,7 +118,7 @@ fun StreakCalendar(
                     Icon(
                         imageVector = Icons.Default.LocalFireDepartment,
                         contentDescription = "Streak Calendar",
-                        tint = if (glassColors.isDark) Color(0xFFFF6B6B) else Color(0xFFE91E8C),
+                        tint = glassColors.textPrimary,
                         modifier = Modifier.size(22.dp)
                     )
                     Spacer(modifier = Modifier.size(8.dp))
@@ -142,7 +135,7 @@ fun StreakCalendar(
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Medium,
                     color = if (currentStreak > 0) {
-                        if (glassColors.isDark) Color(0xFF22C55E) else Color(0xFF16A34A)
+                        glassColors.textPrimary
                     } else {
                         glassColors.textSecondary
                     }
@@ -200,11 +193,17 @@ fun StreakCalendar(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 LegendItem(
-                    color = if (glassColors.isDark) Color(0xFF22C55E) else Color(0xFF16A34A),
+                    color = glassColors.textPrimary,
                     label = "Active",
                     glassColors = glassColors
                 )
-                Spacer(modifier = Modifier.size(20.dp))
+                Spacer(modifier = Modifier.size(16.dp))
+                LegendItem(
+                    color = Color(0xFF4FC3F7),
+                    label = "Frozen",
+                    glassColors = glassColors
+                )
+                Spacer(modifier = Modifier.size(16.dp))
                 LegendItem(
                     color = if (glassColors.isDark) Color(0x30FFFFFF) else Color(0x20000000),
                     label = "Missed",
@@ -241,17 +240,19 @@ private fun CalendarDayCell(
         scale.animateTo(1f, tween(300, easing = FastOutSlowInEasing))
     }
 
-    val activeColor = if (glassColors.isDark) Color(0xFF22C55E) else Color(0xFF16A34A)
+    val activeColor = glassColors.textPrimary
+    val freezeColor = Color(0xFF4FC3F7) // Ice blue for frozen days
     val inactiveColor = if (glassColors.isDark) Color(0x25FFFFFF) else Color(0x15000000)
-    val todayBorderColor = if (glassColors.isDark) Color(0xFF60A5FA) else Color(0xFF3B82F6)
+    val todayBorderColor = glassColors.textPrimary
 
     val bgColor = when {
+        day.isFrozen -> freezeColor
         day.isActive -> activeColor
         else -> inactiveColor
     }
 
     val pulseScale by animateFloatAsState(
-        targetValue = if (day.isToday && day.isActive) 1.1f else 1f,
+        targetValue = if (day.isToday && (day.isActive || day.isFrozen)) 1.1f else 1f,
         animationSpec = tween(600, easing = FastOutSlowInEasing),
         label = "pulseScale"
     )
@@ -264,16 +265,16 @@ private fun CalendarDayCell(
             .alpha(alpha.value)
             .clip(RoundedCornerShape(6.dp))
             .background(
-                if (day.isActive && day.isToday) {
+                if ((day.isActive || day.isFrozen) && day.isToday) {
                     Brush.linearGradient(
-                        colors = listOf(activeColor, Color(0xFF10B981))
+                        colors = listOf(bgColor, bgColor)
                     )
                 } else {
                     Brush.linearGradient(colors = listOf(bgColor, bgColor))
                 }
             )
             .then(
-                if (day.isToday && !day.isActive) {
+                if (day.isToday && !day.isActive && !day.isFrozen) {
                     Modifier.background(
                         color = todayBorderColor.copy(alpha = 0.3f),
                         shape = RoundedCornerShape(6.dp)
@@ -282,14 +283,25 @@ private fun CalendarDayCell(
             ),
         contentAlignment = Alignment.Center
     ) {
-        if (day.isActive) {
-            // Small fire icon for active days
-            Icon(
-                imageVector = Icons.Default.LocalFireDepartment,
-                contentDescription = "Active",
-                tint = Color.White.copy(alpha = 0.9f),
-                modifier = Modifier.size(14.dp)
-            )
+        when {
+            day.isFrozen -> {
+                // Ice icon for frozen days
+                Icon(
+                    imageVector = Icons.Default.AcUnit,
+                    contentDescription = "Frozen",
+                    tint = if (glassColors.isDark) Color.Black.copy(alpha = 0.8f) else Color.White.copy(alpha = 0.9f),
+                    modifier = Modifier.size(14.dp)
+                )
+            }
+            day.isActive -> {
+                // Fire icon for active days - use contrasting color
+                Icon(
+                    imageVector = Icons.Default.LocalFireDepartment,
+                    contentDescription = "Active",
+                    tint = if (glassColors.isDark) Color.Black.copy(alpha = 0.8f) else Color.White.copy(alpha = 0.9f),
+                    modifier = Modifier.size(14.dp)
+                )
+            }
         }
     }
 }

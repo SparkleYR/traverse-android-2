@@ -83,6 +83,14 @@ dependencies {
     // DataStore
     implementation(libs.androidx.datastore.preferences)
     
+    // Charts - Vico
+    implementation(libs.vico.compose)
+    implementation(libs.vico.compose.m3)
+    implementation(libs.vico.core)
+    
+    // Image Loading - Coil
+    implementation(libs.coil.compose)
+    
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

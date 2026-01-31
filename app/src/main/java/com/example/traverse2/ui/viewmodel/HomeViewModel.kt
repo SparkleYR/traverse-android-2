@@ -27,6 +27,7 @@ data class HomeUiState(
     val solveStats: SolveStats? = null,
     val submissionStats: SubmissionStats? = null,
     val recentSolves: List<Solve> = emptyList(),
+    val allSolves: List<Solve> = emptyList(), // For charts
     val achievements: List<Achievement> = emptyList(),
     val calendarSolveDates: Set<LocalDate> = emptySet()
 )
@@ -60,6 +61,9 @@ class HomeViewModel : ViewModel() {
                     }
                     val recentSolvesDeferred = async { 
                         runCatching { RetrofitClient.api.getMySolves(limit = 4, offset = 0) }.getOrNull() 
+                    }
+                    val allSolvesDeferred = async { 
+                        runCatching { RetrofitClient.api.getMySolves(limit = 50, offset = 0) }.getOrNull() 
                     }
                     val achievementsDeferred = async { 
                         runCatching { RetrofitClient.api.getAchievements() }.getOrNull() 
@@ -113,6 +117,7 @@ class HomeViewModel : ViewModel() {
                     val solveStatsResponse = solveStatsDeferred.await()
                     val submissionStatsResponse = submissionStatsDeferred.await()
                     val recentSolvesResponse = recentSolvesDeferred.await()
+                    val allSolvesResponse = allSolvesDeferred.await()
                     val achievementsResponse = achievementsDeferred.await()
                     val solveDates = calendarSolvesDeferred.await()
                     val revisionDates = calendarRevisionsDeferred.await()
@@ -121,6 +126,7 @@ class HomeViewModel : ViewModel() {
                     val solveStats = solveStatsResponse?.body()?.stats
                     val submissionStats = submissionStatsResponse?.body()?.stats
                     val recentSolves = recentSolvesResponse?.body()?.solves ?: emptyList()
+                    val allSolves = allSolvesResponse?.body()?.solves ?: emptyList()
                     val achievements = achievementsResponse?.body()?.achievements ?: emptyList()
                     val calendarSolveDates = solveDates + revisionDates
                     
@@ -131,6 +137,7 @@ class HomeViewModel : ViewModel() {
                         solveStats = solveStats,
                         submissionStats = submissionStats,
                         recentSolves = recentSolves,
+                        allSolves = allSolves,
                         achievements = achievements,
                         calendarSolveDates = calendarSolveDates
                     )

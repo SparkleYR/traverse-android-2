@@ -67,7 +67,9 @@ fun StreakScreen(
     totalActiveDays: Int = 0,
     averagePerWeek: Float = 0f,
     friends: List<FriendItem> = emptyList(),
-    streakDays: List<StreakDay> = emptyList()
+    streakDays: List<StreakDay> = emptyList(),
+    bestFriendName: String? = null,
+    bestFriendStreak: Int = 0
 ) {
     val glassColors = TraverseTheme.glassColors
     val scrollState = rememberScrollState()
@@ -108,11 +110,13 @@ fun StreakScreen(
                 .fillMaxSize()
                 .verticalScroll(scrollState)
                 .padding(horizontal = 20.dp)
-                .padding(top = 100.dp, bottom = 120.dp)
+                .padding(top = 120.dp, bottom = 120.dp)
         ) {
             // Current Streak Hero Card
             StreakHeroCard(
                 currentStreak = currentStreak,
+                bestFriendName = bestFriendName,
+                bestFriendStreak = bestFriendStreak,
                 hazeState = hazeState,
                 glassColors = glassColors
             )
@@ -155,7 +159,7 @@ fun StreakScreen(
             glassColors = glassColors,
             onBack = onBack,
             icon = Icons.Default.LocalFireDepartment,
-            iconTint = if (glassColors.isDark) Color(0xFFFF6B6B) else Color(0xFFE91E8C)
+            iconTint = glassColors.textPrimary
         )
     }
 }
@@ -163,6 +167,8 @@ fun StreakScreen(
 @Composable
 private fun StreakHeroCard(
     currentStreak: Int,
+    bestFriendName: String?,
+    bestFriendStreak: Int,
     hazeState: HazeState,
     glassColors: GlassColors
 ) {
@@ -178,26 +184,15 @@ private fun StreakHeroCard(
         )
     }
     
-    val streakColor = when {
-        currentStreak >= 30 -> Color(0xFFFFD700) // Gold
-        currentStreak >= 14 -> Color(0xFFFF6B6B) // Red-orange
-        currentStreak >= 7 -> Color(0xFFE91E8C) // Pink
-        else -> if (glassColors.isDark) Color(0xFF60A5FA) else Color(0xFF3B82F6) // Blue
-    }
+    val streakColor = glassColors.textPrimary
+    
+    val backgroundColor = if (glassColors.isDark) Color(0xFF1C1C1E) else Color(0xFFF2F2F7)
     
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(28.dp))
-            .hazeChild(
-                state = hazeState,
-                style = HazeStyle(
-                    backgroundColor = cardBackground,
-                    blurRadius = 24.dp,
-                    tint = HazeTint(cardTint),
-                    noiseFactor = 0.02f
-                )
-            )
+            .background(backgroundColor)
             .background(
                 if (glassColors.isDark) Color(0x20FFFFFF) else Color(0x50FFFFFF)
             )
@@ -257,6 +252,47 @@ private fun StreakHeroCard(
                 fontSize = 16.sp,
                 color = glassColors.textSecondary
             )
+            
+            // Best friend streak section
+            if (bestFriendName != null && bestFriendStreak > 0) {
+                Spacer(modifier = Modifier.height(20.dp))
+                
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(glassColors.textPrimary.copy(alpha = 0.1f))
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.People,
+                        contentDescription = "Best Friend",
+                        tint = glassColors.textSecondary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = bestFriendName,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = glassColors.textPrimary
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Icon(
+                        imageVector = Icons.Default.LocalFireDepartment,
+                        contentDescription = "Streak",
+                        tint = glassColors.textSecondary,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = "$bestFriendStreak",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = glassColors.textPrimary
+                    )
+                }
+            }
         }
     }
 }
@@ -296,7 +332,7 @@ private fun StreakStatsCard(
                 icon = Icons.Default.EmojiEvents,
                 value = "$longestStreak",
                 label = "Longest",
-                color = Color(0xFFFFD700),
+                color = glassColors.textPrimary,
                 glassColors = glassColors
             )
             
@@ -304,7 +340,7 @@ private fun StreakStatsCard(
                 icon = Icons.Default.Schedule,
                 value = "$totalActiveDays",
                 label = "Active Days",
-                color = Color(0xFF22C55E),
+                color = glassColors.textPrimary,
                 glassColors = glassColors
             )
             
@@ -312,7 +348,7 @@ private fun StreakStatsCard(
                 icon = Icons.Default.TrendingUp,
                 value = String.format("%.1f", averagePerWeek),
                 label = "Avg/Week",
-                color = if (glassColors.isDark) Color(0xFF60A5FA) else Color(0xFF3B82F6),
+                color = glassColors.textPrimary,
                 glassColors = glassColors
             )
         }
@@ -383,7 +419,7 @@ private fun FriendStreaksCard(
                 Icon(
                     imageVector = Icons.Default.People,
                     contentDescription = "Friend Streaks",
-                    tint = if (glassColors.isDark) Color(0xFF60A5FA) else Color(0xFF3B82F6),
+                    tint = glassColors.textPrimary,
                     modifier = Modifier.size(22.dp)
                 )
                 Spacer(modifier = Modifier.width(10.dp))
@@ -422,9 +458,9 @@ private fun FriendStreakItem(
     val bgColor = if (glassColors.isDark) Color(0x18FFFFFF) else Color(0x15000000)
     
     val rankColor = when (rank) {
-        1 -> Color(0xFFFFD700) // Gold
-        2 -> Color(0xFFC0C0C0) // Silver
-        3 -> Color(0xFFCD7F32) // Bronze
+        1 -> glassColors.textPrimary
+        2 -> glassColors.textPrimary.copy(alpha = 0.8f)
+        3 -> glassColors.textPrimary.copy(alpha = 0.6f)
         else -> glassColors.textSecondary
     }
     
@@ -485,7 +521,7 @@ private fun FriendStreakItem(
                     modifier = Modifier
                         .size(8.dp)
                         .clip(CircleShape)
-                        .background(Color(0xFF22C55E))
+                        .background(glassColors.textPrimary)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
             }
@@ -493,7 +529,7 @@ private fun FriendStreakItem(
             Icon(
                 imageVector = Icons.Default.LocalFireDepartment,
                 contentDescription = "Streak",
-                tint = if (friend.streak > 0) Color(0xFFFF6B6B) else glassColors.textSecondary.copy(alpha = 0.5f),
+                tint = if (friend.streak > 0) glassColors.textPrimary else glassColors.textSecondary.copy(alpha = 0.5f),
                 modifier = Modifier.size(18.dp)
             )
             

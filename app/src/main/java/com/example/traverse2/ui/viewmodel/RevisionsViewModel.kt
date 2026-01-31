@@ -23,7 +23,8 @@ data class RevisionsUiState(
     val currentTab: RevisionType = RevisionType.NORMAL,
     val error: String? = null,
     val hasMLAccess: Boolean = false,
-    val showPaywall: Boolean = false
+    val showPaywall: Boolean = false,
+    val completingRevisionId: Int? = null
 )
 
 enum class RevisionType {
@@ -117,6 +118,7 @@ class RevisionsViewModel : ViewModel() {
     
     fun completeRevision(revisionId: Int, isML: Boolean = false) {
         viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(completingRevisionId = revisionId)
             try {
                 val response = RetrofitClient.api.completeRevision(revisionId)
                 
@@ -124,12 +126,14 @@ class RevisionsViewModel : ViewModel() {
                     loadRevisions()
                 } else {
                     _uiState.value = _uiState.value.copy(
-                        error = "Failed to complete revision: ${response.message()}"
+                        error = "Failed to complete revision: ${response.message()}",
+                        completingRevisionId = null
                     )
                 }
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
-                    error = "Network error: ${e.message}"
+                    error = "Network error: ${e.message}",
+                    completingRevisionId = null
                 )
             }
         }

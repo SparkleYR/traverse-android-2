@@ -27,32 +27,22 @@ fun GlassCard(
 ) {
     val glassColors = TraverseTheme.glassColors
     
-    val glassStyle = HazeStyle(
-        backgroundColor = if (glassColors.isDark) Color.Black else Color.White,
-        blurRadius = 20.dp,
-        tint = HazeTint(
-            color = if (glassColors.isDark) 
-                Color.White.copy(alpha = 0.12f) 
-            else 
-                Color.White.copy(alpha = 0.75f)
-        ),
-        noiseFactor = if (glassColors.isDark) 0.04f else 0.02f
-    )
+    val backgroundColor = if (glassColors.isDark) 
+        Color(0xFF1C1C1E)
+    else 
+        Color(0xFFF2F2F7)
     
     val borderColor = if (glassColors.isDark) 
-        Color.White.copy(alpha = 0.2f) 
+        Color.White.copy(alpha = 0.1f) 
     else 
-        Color.White.copy(alpha = 0.6f)
+        Color.Black.copy(alpha = 0.1f)
     
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(cornerRadius))
-            .hazeChild(
-                state = hazeState,
-                style = glassStyle
-            )
+            .background(backgroundColor)
             .border(
-                width = if (glassColors.isDark) 1.dp else 1.5.dp,
+                width = 1.dp,
                 color = borderColor,
                 shape = RoundedCornerShape(cornerRadius)
             ),
@@ -68,16 +58,16 @@ fun SimpleGlassCard(
 ) {
     val glassColors = TraverseTheme.glassColors
     
+    val backgroundColor = if (glassColors.isDark) 
+        Color(0xFF1C1C1E)
+    else 
+        Color(0xFFF2F2F7)
+    
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(cornerRadius))
-            .background(glassColors.glass)
-            .border(
-                width = 1.dp,
-                color = glassColors.glassBorder,
-                shape = RoundedCornerShape(cornerRadius)
-            )
-            .padding(24.dp),
+            .background(backgroundColor)
+            .padding(16.dp),
         content = content
     )
 }

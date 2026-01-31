@@ -18,7 +18,8 @@ data class RegisterRequest(
 @Serializable
 data class AuthResponse(
     val message: String,
-    val user: User
+    val user: User,
+    val token: String? = null
 )
 
 @Serializable

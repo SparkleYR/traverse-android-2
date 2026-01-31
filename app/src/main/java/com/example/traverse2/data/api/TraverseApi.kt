@@ -125,6 +125,23 @@ interface TraverseApi {
     @DELETE("friend-streaks/{username}")
     suspend fun deleteFriendStreak(@Path("username") username: String): Response<MessageResponse>
 
+    // ========== STREAK FREEZES ==========
+    
+    @GET("users/me/freezes")
+    suspend fun getFreezeInfo(): Response<FreezeInfoResponse>
+    
+    @GET("users/me/freezes/used")
+    suspend fun getUsedFreezeDates(): Response<FreezeDatesResponse>
+    
+    @POST("users/me/freezes/purchase")
+    suspend fun purchaseFreezes(@Body request: FreezePurchaseRequest): Response<FreezePurchaseResponse>
+    
+    @POST("users/{username}/freezes/gift")
+    suspend fun giftFreeze(
+        @Path("username") username: String,
+        @Body request: FreezeGiftRequest
+    ): Response<FreezeGiftResponse>
+
     // ========== USER SEARCH ==========
 
     @GET("users")
@@ -662,4 +679,53 @@ data class ChangePasswordRequest(
 @kotlinx.serialization.Serializable
 data class DeleteAccountRequest(
     val password: String
+)
+
+// ========== STREAK FREEZE MODELS ==========
+
+@kotlinx.serialization.Serializable
+data class FreezeInfoResponse(
+    val availableFreezes: Int,
+    val usedFreezes: Int,
+    val totalFreezes: Int,
+    val costs: FreezeCosts
+)
+
+@kotlinx.serialization.Serializable
+data class FreezeCosts(
+    val purchase: Int,
+    val gift: Int
+)
+
+@kotlinx.serialization.Serializable
+data class FreezeDatesResponse(
+    val freezeDates: List<String>
+)
+
+@kotlinx.serialization.Serializable
+data class FreezePurchaseRequest(
+    val count: Int
+)
+
+@kotlinx.serialization.Serializable
+data class FreezePurchaseResponse(
+    val message: String,
+    val freezesPurchased: Int,
+    val xpSpent: Int,
+    val availableFreezes: Int,
+    val remainingXp: Int
+)
+
+@kotlinx.serialization.Serializable
+data class FreezeGiftRequest(
+    val count: Int
+)
+
+@kotlinx.serialization.Serializable
+data class FreezeGiftResponse(
+    val message: String,
+    val freezesGifted: Int,
+    val xpSpent: Int,
+    val recipient: String,
+    val remainingXp: Int
 )

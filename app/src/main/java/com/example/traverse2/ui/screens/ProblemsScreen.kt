@@ -62,6 +62,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import com.example.traverse2.data.api.Solve
 import com.example.traverse2.ui.components.GlassTopBar
 import com.example.traverse2.ui.theme.GlassColors
@@ -79,6 +82,7 @@ private val CATEGORY_NAMES = listOf(
     "Stack", "Queue", "Heap", "HashMap", "Math"
 )
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProblemsScreen(
     hazeState: HazeState,
@@ -88,10 +92,11 @@ fun ProblemsScreen(
     val glassColors = TraverseTheme.glassColors
     val scrollState = rememberScrollState()
     val uiState by viewModel.uiState.collectAsState()
+    val pullToRefreshState = rememberPullToRefreshState()
     
-    val progressColor = if (glassColors.isDark) Color.White else Color(0xFFE91E8C)
-    val trackColor = if (glassColors.isDark) Color(0x30FFFFFF) else Color(0x30E91E8C)
-    val successColor = Color(0xFF22C55E)
+    val progressColor = glassColors.textPrimary
+    val trackColor = glassColors.textSecondary.copy(alpha = 0.3f)
+    val successColor = glassColors.textPrimary
     
     Box(modifier = Modifier.fillMaxSize()) {
         when {
@@ -123,13 +128,19 @@ fun ProblemsScreen(
                 val totalProblems = uiState.totalProblems.coerceAtLeast(problemsCompleted)
                 val percentage = if (totalProblems > 0) (problemsCompleted.toFloat() / totalProblems * 100).toInt() else 0
                 
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .verticalScroll(scrollState)
-                        .padding(horizontal = 20.dp)
-                        .padding(top = 100.dp, bottom = 120.dp)
+                PullToRefreshBox(
+                    isRefreshing = uiState.isLoading,
+                    onRefresh = { viewModel.refresh() },
+                    state = pullToRefreshState,
+                    modifier = Modifier.fillMaxSize()
                 ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .verticalScroll(scrollState)
+                            .padding(horizontal = 20.dp)
+                            .padding(top = 100.dp, bottom = 120.dp)
+                    ) {
                     Spacer(modifier = Modifier.height(16.dp))
                     
                     // Stats Card
@@ -139,37 +150,6 @@ fun ProblemsScreen(
                             horizontalArrangement = Arrangement.SpaceEvenly,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            val progress = remember { Animatable(0f) }
-                            LaunchedEffect(problemsCompleted, totalProblems) {
-                                progress.animateTo(
-                                    if (totalProblems > 0) problemsCompleted.toFloat() / totalProblems else 0f,
-                                    tween(1200, easing = FastOutSlowInEasing)
-                                )
-                            }
-                            
-                            Box(
-                                modifier = Modifier.size(100.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Canvas(modifier = Modifier.fillMaxSize()) {
-                                    drawArc(trackColor, -90f, 360f, false, style = Stroke(12.dp.toPx(), cap = StrokeCap.Round))
-                                    drawArc(progressColor, -90f, 360f * progress.value, false, style = Stroke(12.dp.toPx(), cap = StrokeCap.Round))
-                                }
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Text(
-                                        text = "$percentage%",
-                                        fontSize = 24.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = glassColors.textPrimary
-                                    )
-                                    Text(
-                                        text = "Complete",
-                                        fontSize = 11.sp,
-                                        color = glassColors.textSecondary
-                                    )
-                                }
-                            }
-                            
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Icon(
@@ -195,10 +175,24 @@ fun ProblemsScreen(
                             
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text(
+                                    text = "$percentage%",
+                                    fontSize = 32.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = glassColors.textPrimary
+                                )
+                                Text(
+                                    text = "Complete",
+                                    fontSize = 13.sp,
+                                    color = glassColors.textSecondary
+                                )
+                            }
+                            
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(
                                     text = "${stats?.totalXp ?: 0}",
                                     fontSize = 32.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = if (glassColors.isDark) Color(0xFFFBBF24) else Color(0xFFE91E8C)
+                                    color = glassColors.textPrimary
                                 )
                                 Text(
                                     text = "Total XP",
@@ -213,37 +207,20 @@ fun ProblemsScreen(
                     
                     // Solved Problems Section
                     if (solves.isNotEmpty()) {
-                        GlassCard(hazeState = hazeState, glassColors = glassColors) {
-                            Column {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(10.dp)
-                                            .clip(CircleShape)
-                                            .background(successColor)
-                                    )
-                                    Spacer(modifier = Modifier.width(10.dp))
-                                    Text(
-                                        text = "Solved Problems",
-                                        fontSize = 18.sp,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = glassColors.textPrimary
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(
-                                        text = "(${solves.size})",
-                                        fontSize = 14.sp,
-                                        color = glassColors.textSecondary
-                                    )
-                                }
-                                
-                                Spacer(modifier = Modifier.height(16.dp))
-                                
-                                solves.forEachIndexed { index, solve ->
-                                    AnimatedSolveItem(solve, glassColors, index * 50)
-                                    if (index < solves.size - 1) {
-                                        Spacer(modifier = Modifier.height(10.dp))
-                                    }
+                        Column {
+                            Text(
+                                text = "Solved Problems",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = glassColors.textPrimary
+                            )
+                            
+                            Spacer(modifier = Modifier.height(16.dp))
+                            
+                            solves.forEachIndexed { index, solve ->
+                                AnimatedSolveItem(solve, glassColors, index * 50)
+                                if (index < solves.size - 1) {
+                                    Spacer(modifier = Modifier.height(10.dp))
                                 }
                             }
                         }
@@ -273,6 +250,7 @@ fun ProblemsScreen(
                             }
                         }
                     }
+                    }
                 }
             }
         }
@@ -283,7 +261,7 @@ fun ProblemsScreen(
             glassColors = glassColors,
             onBack = onBack,
             icon = Icons.Default.Code,
-            iconTint = if (glassColors.isDark) Color.White else Color(0xFFE91E8C)
+            iconTint = glassColors.textPrimary
         )
     }
 }
@@ -294,23 +272,13 @@ private fun GlassCard(
     glassColors: GlassColors,
     content: @Composable () -> Unit
 ) {
-    val cardBackground = if (glassColors.isDark) Color.Black else Color.White
-    val cardTint = if (glassColors.isDark) Color(0x30000000) else Color(0x30FFFFFF)
+    val backgroundColor = if (glassColors.isDark) Color(0xFF1C1C1E) else Color(0xFFF2F2F7)
     
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(24.dp))
-            .hazeChild(
-                state = hazeState,
-                style = HazeStyle(
-                    backgroundColor = cardBackground,
-                    blurRadius = 24.dp,
-                    tint = HazeTint(cardTint),
-                    noiseFactor = 0.02f
-                )
-            )
-            .background(if (glassColors.isDark) Color(0x15FFFFFF) else Color(0x40FFFFFF))
+            .background(backgroundColor)
             .padding(24.dp)
     ) {
         content()
@@ -349,9 +317,9 @@ private fun SolveListItem(
     var isExpanded by remember { mutableStateOf(false) }
     
     val difficultyColor = when (solve.problem.difficulty?.lowercase()) {
-        "easy" -> Color(0xFF22C55E)
-        "medium" -> Color(0xFFFBBF24)
-        "hard" -> Color(0xFFEF4444)
+        "easy" -> glassColors.textSecondary
+        "medium" -> glassColors.textPrimary
+        "hard" -> glassColors.textPrimary
         else -> glassColors.textSecondary
     }
     
@@ -385,7 +353,7 @@ private fun SolveListItem(
                 Icon(
                     imageVector = Icons.Default.CheckCircle,
                     contentDescription = "Solved",
-                    tint = Color(0xFF22C55E),
+                    tint = glassColors.textPrimary,
                     modifier = Modifier.size(22.dp)
                 )
                 Spacer(modifier = Modifier.width(12.dp))
@@ -472,7 +440,7 @@ private fun SolveListItem(
                     icon = null,
                     label = "XP Earned",
                     value = "+${solve.xpAwarded} XP",
-                    valueColor = Color(0xFFFBBF24),
+                    valueColor = glassColors.textPrimary,
                     glassColors = glassColors
                 )
                 
@@ -529,7 +497,7 @@ private fun SolveListItem(
                             verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             submission.mistakeTags.forEach { tag ->
-                                TagChip(tag, Color(0xFFEF4444), glassColors)
+                                TagChip(tag, glassColors.textPrimary, glassColors)
                             }
                         }
                         Spacer(modifier = Modifier.height(8.dp))

@@ -1,10 +1,15 @@
 package com.example.traverse2.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -12,36 +17,35 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.itemsIndexed
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Stars
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.traverse2.ui.components.GlassTopBar
 import com.example.traverse2.ui.theme.GlassColors
 import com.example.traverse2.ui.theme.TraverseTheme
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.HazeStyle
-import dev.chrisbanes.haze.HazeTint
-import dev.chrisbanes.haze.hazeChild
 
 @Composable
 fun AchievementsScreen(
@@ -53,6 +57,11 @@ fun AchievementsScreen(
     
     val unlockedCount = achievements.count { it.unlocked }
     val totalCount = achievements.size
+    val remaining = totalCount - unlockedCount
+    val percentage = if (totalCount > 0) (unlockedCount * 100 / totalCount) else 0
+    
+    // Group achievements by category
+    val achievementsByCategory = achievements.groupBy { it.category }
     
     Column(
         modifier = Modifier
@@ -71,155 +80,136 @@ fun AchievementsScreen(
             hazeState = hazeState,
             glassColors = glassColors,
             onBack = onBack,
-            title = "Achievements"
+            title = "All Achievements"
         )
         
-        // Main content - Use LazyVerticalGrid for everything (it handles scrolling)
-        if (achievements.isNotEmpty()) {
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(3),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 20.dp),
-                modifier = Modifier.fillMaxSize()
-            ) {
-                // Stats card as header
-                item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(3) }) {
-                    Column {
-                        StatsCard(unlockedCount, totalCount, glassColors, hazeState)
-                        Spacer(modifier = Modifier.height(24.dp))
-                        Text(
-                            text = "All Achievements",
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = glassColors.textPrimary
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                    }
-                }
-                
-                // Achievement items
-                itemsIndexed(achievements) { index, achievement ->
-                    AchievementCardDetailed(achievement, glassColors, hazeState)
-                }
-                
-                // Bottom spacer
-                item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(3) }) {
-                    Spacer(modifier = Modifier.height(80.dp))
-                }
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // Stats header
+            item {
+                Spacer(modifier = Modifier.height(8.dp))
+                StatsHeader(
+                    total = totalCount,
+                    progress = percentage,
+                    remaining = remaining,
+                    glassColors = glassColors
+                )
             }
-        } else {
-            // Empty state
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.padding(20.dp)
-                ) {
-                    StatsCard(unlockedCount, totalCount, glassColors, hazeState)
-                    Spacer(modifier = Modifier.height(40.dp))
-                    Text(
-                        text = "No achievements yet",
-                        color = glassColors.textSecondary,
-                        fontSize = 16.sp
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "Start solving problems to unlock achievements!",
-                        color = glassColors.textSecondary.copy(alpha = 0.7f),
-                        fontSize = 14.sp
-                    )
-                }
+            
+            // Section title
+            item {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Achievements by Category",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = glassColors.textPrimary
+                )
+            }
+            
+            // Category cards
+            items(achievementsByCategory.toList()) { (category, categoryAchievements) ->
+                CategoryCard(
+                    category = category,
+                    achievements = categoryAchievements,
+                    glassColors = glassColors
+                )
+            }
+            
+            // Bottom spacer
+            item {
+                Spacer(modifier = Modifier.height(100.dp))
             }
         }
     }
 }
 
 @Composable
-private fun StatsCard(
-    unlockedCount: Int,
-    totalCount: Int,
-    glassColors: GlassColors,
-    hazeState: HazeState
+private fun StatsHeader(
+    total: Int,
+    progress: Int,
+    remaining: Int,
+    glassColors: GlassColors
 ) {
-    val percentage = if (totalCount > 0) (unlockedCount * 100 / totalCount) else 0
+    val cardBg = if (glassColors.isDark) Color(0xFF1C1C1E) else Color(0xFFF2F2F7)
+    val textColor = glassColors.textPrimary
+    val secondaryColor = glassColors.textSecondary
+    val accentColor = Color(0xFFB388FF) // Purple accent
     
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .hazeChild(
-                state = hazeState,
-                style = HazeStyle(
-                    backgroundColor = Color(0xFFE91E8C),
-                    blurRadius = 20.dp,
-                    tint = HazeTint(Color(0x40E91E8C)),
-                    noiseFactor = 0.02f
-                )
-            )
-            .background(
-                brush = androidx.compose.ui.graphics.Brush.linearGradient(
-                    colors = listOf(Color(0x80E91E8C), Color(0x80A855F7))
-                )
-            )
-            .padding(24.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(cardBg)
+            .padding(vertical = 20.dp)
     ) {
-        Column {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column {
-                    Text(
-                        text = "Progress",
-                        fontSize = 14.sp,
-                        color = Color.White.copy(alpha = 0.9f)
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "$unlockedCount / $totalCount",
-                        fontSize = 36.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                }
-                
-                // Progress circle
-                Box(
-                    modifier = Modifier
-                        .size(80.dp)
-                        .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.2f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "$percentage%",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Total
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = "$total",
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = accentColor
+                )
+                Text(
+                    text = "Total",
+                    fontSize = 13.sp,
+                    color = secondaryColor
+                )
             }
             
-            Spacer(modifier = Modifier.height(12.dp))
-            
-            // Progress bar
+            // Divider
             Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .height(6.dp)
-                    .clip(RoundedCornerShape(3.dp))
-                    .background(Color.White.copy(alpha = 0.3f))
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth(percentage / 100f)
-                        .height(6.dp)
-                        .clip(RoundedCornerShape(3.dp))
-                        .background(Color.White)
+                    .width(1.dp)
+                    .height(40.dp)
+                    .background(secondaryColor.copy(alpha = 0.3f))
+            )
+            
+            // Progress
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = "$progress%",
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = accentColor
+                )
+                Text(
+                    text = "Progress",
+                    fontSize = 13.sp,
+                    color = secondaryColor
+                )
+            }
+            
+            // Divider
+            Box(
+                modifier = Modifier
+                    .width(1.dp)
+                    .height(40.dp)
+                    .background(secondaryColor.copy(alpha = 0.3f))
+            )
+            
+            // Remaining
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = "$remaining",
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = textColor
+                )
+                Text(
+                    text = "Remaining",
+                    fontSize = 13.sp,
+                    color = secondaryColor
                 )
             }
         }
@@ -227,88 +217,166 @@ private fun StatsCard(
 }
 
 @Composable
-private fun AchievementCardDetailed(
-    achievement: AchievementData,
-    glassColors: GlassColors,
-    hazeState: HazeState
+private fun CategoryCard(
+    category: String,
+    achievements: List<AchievementData>,
+    glassColors: GlassColors
 ) {
-    if (achievement.name.isEmpty()) {
-        return
-    }
-
-    val cardBackground = if (glassColors.isDark) Color.Black else Color.White
-    val cardTint = if (glassColors.isDark) Color(0x30000000) else Color(0x30FFFFFF)
-    val unlockedColor = Color(0xFF22C55E)
-    val lockedColor = glassColors.textSecondary.copy(alpha = 0.4f)
-
+    var isExpanded by remember { mutableStateOf(false) }
+    
+    val unlockedCount = achievements.count { it.unlocked }
+    val totalCount = achievements.size
+    
+    val cardBg = if (glassColors.isDark) Color(0xFF1C1C1E) else Color(0xFFF2F2F7)
+    val iconBg = if (glassColors.isDark) Color(0xFF2C2C2E) else Color(0xFFE5E5EA)
+    
+    val rotationAngle by animateFloatAsState(
+        targetValue = if (isExpanded) 180f else 0f,
+        label = "expandRotation"
+    )
+    
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(140.dp) // Fixed height for uniform card size
             .clip(RoundedCornerShape(16.dp))
-            .hazeChild(
-                state = hazeState,
-                style = HazeStyle(
-                    backgroundColor = cardBackground,
-                    blurRadius = 24.dp,
-                    tint = HazeTint(cardTint),
-                    noiseFactor = 0.02f
-                )
-            )
-            .background(if (glassColors.isDark) Color(0x15FFFFFF) else Color(0x40FFFFFF))
-            .padding(12.dp)
+            .background(cardBg)
     ) {
-        Column(
-            modifier = Modifier.fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            // Icon/Status
-            Box(
-                modifier = Modifier
-                    .size(50.dp)
-                    .clip(CircleShape)
-                    .background(
-                        if (achievement.unlocked) unlockedColor.copy(alpha = 0.2f)
-                        else lockedColor
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = if (achievement.unlocked) Icons.Default.EmojiEvents else Icons.Default.Lock,
-                    contentDescription = achievement.name,
-                    tint = if (achievement.unlocked) unlockedColor else lockedColor,
-                    modifier = Modifier.size(24.dp)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Name with fixed height to prevent layout shifts
-            Box(
+        Column {
+            // Header row
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(32.dp),
-                contentAlignment = Alignment.Center
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) { isExpanded = !isExpanded }
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = achievement.name,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = glassColors.textPrimary,
-                    maxLines = 2,
-                    textAlign = TextAlign.Center,
-                    lineHeight = 14.sp
+                // Category icon
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(iconBg),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Stars,
+                        contentDescription = category,
+                        tint = glassColors.textPrimary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+                
+                Spacer(modifier = Modifier.width(16.dp))
+                
+                // Category info
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = category.replaceFirstChar { it.uppercase() },
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = glassColors.textPrimary
+                    )
+                    Text(
+                        text = "$unlockedCount of $totalCount unlocked",
+                        fontSize = 14.sp,
+                        color = glassColors.textSecondary
+                    )
+                }
+                
+                // Expand arrow
+                Icon(
+                    imageVector = Icons.Default.KeyboardArrowDown,
+                    contentDescription = if (isExpanded) "Collapse" else "Expand",
+                    tint = glassColors.textSecondary,
+                    modifier = Modifier
+                        .size(24.dp)
+                        .rotate(rotationAngle)
                 )
             }
+            
+            // Expanded content
+            AnimatedVisibility(
+                visible = isExpanded,
+                enter = expandVertically(),
+                exit = shrinkVertically()
+            ) {
+                Column(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                ) {
+                    achievements.forEachIndexed { index, achievement ->
+                        AchievementRow(
+                            achievement = achievement,
+                            glassColors = glassColors
+                        )
+                        if (index < achievements.lastIndex) {
+                            HorizontalDivider(
+                                color = glassColors.textSecondary.copy(alpha = 0.15f),
+                                thickness = 1.dp,
+                                modifier = Modifier.padding(vertical = 12.dp)
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+            }
+        }
+    }
+}
 
-            Spacer(modifier = Modifier.height(4.dp))
-
-            // Status
+@Composable
+private fun AchievementRow(
+    achievement: AchievementData,
+    glassColors: GlassColors
+) {
+    val iconBg = if (glassColors.isDark) Color(0xFF2C2C2E) else Color(0xFFE5E5EA)
+    val lockedAlpha = 0.5f
+    
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Achievement icon
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .clip(CircleShape)
+                .background(iconBg),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.Lock,
+                contentDescription = null,
+                tint = if (achievement.unlocked) 
+                    glassColors.textPrimary 
+                else 
+                    glassColors.textSecondary.copy(alpha = lockedAlpha),
+                modifier = Modifier.size(20.dp)
+            )
+        }
+        
+        Spacer(modifier = Modifier.width(12.dp))
+        
+        // Achievement info
+        Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = if (achievement.unlocked) "Unlocked" else "Locked",
-                fontSize = 10.sp,
-                color = if (achievement.unlocked) unlockedColor else glassColors.textSecondary
+                text = achievement.name,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Medium,
+                color = if (achievement.unlocked) 
+                    glassColors.textPrimary 
+                else 
+                    glassColors.textSecondary.copy(alpha = 0.7f)
+            )
+            Text(
+                text = achievement.description,
+                fontSize = 13.sp,
+                color = glassColors.textSecondary.copy(
+                    alpha = if (achievement.unlocked) 1f else 0.6f
+                ),
+                lineHeight = 17.sp
             )
         }
     }

@@ -1,11 +1,5 @@
 package com.example.traverse2.ui.screens
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -46,7 +40,6 @@ import androidx.compose.material3.TabRowDefaults
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -56,7 +49,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
@@ -65,6 +57,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import com.example.traverse2.data.api.FriendItem
 import com.example.traverse2.data.api.FriendStreakItem
 import com.example.traverse2.data.api.ReceivedFriendRequest
@@ -79,8 +74,8 @@ import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.HazeTint
 import dev.chrisbanes.haze.hazeChild
-import kotlinx.coroutines.delay
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FriendsScreen(
     hazeState: HazeState,
@@ -89,19 +84,24 @@ fun FriendsScreen(
 ) {
     val glassColors = TraverseTheme.glassColors
     val uiState by viewModel.uiState.collectAsState()
+    val pullToRefreshState = rememberPullToRefreshState()
 
     var selectedTab by remember { mutableIntStateOf(0) }
     val tabs = listOf("Friends", "Requests", "Streaks")
 
     var showAddFriendDialog by remember { mutableStateOf(false) }
-    var isVisible by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) { isVisible = true }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(top = 60.dp)
+    PullToRefreshBox(
+        isRefreshing = uiState.isLoading,
+        onRefresh = { viewModel.refresh() },
+        state = pullToRefreshState,
+        modifier = Modifier.fillMaxSize()
     ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(top = 60.dp)
+        ) {
         // Header
         Row(
             modifier = Modifier
@@ -117,39 +117,20 @@ fun FriendsScreen(
                 color = glassColors.textPrimary
             )
 
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                // Request badge
-                val totalRequests = uiState.receivedRequests.size + uiState.receivedStreakRequests.size
-                if (totalRequests > 0) {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(Color(0xFFEF4444).copy(alpha = 0.2f))
-                            .padding(horizontal = 10.dp, vertical = 4.dp)
-                    ) {
-                        Text(
-                            text = "$totalRequests pending",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = Color(0xFFEF4444)
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
-                }
-
-                // Add friend button
-                IconButton(
-                    onClick = { showAddFriendDialog = true },
+            // Request badge only
+            val totalRequests = uiState.receivedRequests.size + uiState.receivedStreakRequests.size
+            if (totalRequests > 0) {
+                Box(
                     modifier = Modifier
-                        .size(36.dp)
-                        .clip(CircleShape)
-                        .background(if (glassColors.isDark) Color(0x20FFFFFF) else Color(0x20000000))
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color(0xFFEF4444).copy(alpha = 0.2f))
+                        .padding(horizontal = 10.dp, vertical = 4.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.PersonAdd,
-                        contentDescription = "Add Friend",
-                        tint = if (glassColors.isDark) Color.White else Color(0xFFE91E8C),
-                        modifier = Modifier.size(20.dp)
+                    Text(
+                        text = "$totalRequests pending",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color(0xFFEF4444)
                     )
                 }
             }
@@ -180,7 +161,7 @@ fun FriendsScreen(
                 contentAlignment = Alignment.Center
             ) {
                 CircularProgressIndicator(
-                    color = if (glassColors.isDark) Color.White else Color(0xFFE91E8C)
+                    color = glassColors.textPrimary
                 )
             }
         } else {
@@ -191,8 +172,7 @@ fun FriendsScreen(
                     glassColors = glassColors,
                     onFriendClick = onFriendClick,
                     onRemoveFriend = { viewModel.removeFriend(it.username) },
-                    onStartStreak = { viewModel.sendStreakRequest(it.username) },
-                    isVisible = isVisible
+                    onStartStreak = { viewModel.sendStreakRequest(it.username) }
                 )
                 1 -> RequestsTab(
                     receivedRequests = uiState.receivedRequests,
@@ -201,8 +181,7 @@ fun FriendsScreen(
                     glassColors = glassColors,
                     onAccept = { viewModel.acceptFriendRequest(it) },
                     onReject = { viewModel.rejectFriendRequest(it) },
-                    onCancel = { viewModel.cancelFriendRequest(it) },
-                    isVisible = isVisible
+                    onCancel = { viewModel.cancelFriendRequest(it) }
                 )
                 2 -> StreaksTab(
                     friendStreaks = uiState.friendStreaks,
@@ -213,8 +192,41 @@ fun FriendsScreen(
                     onAccept = { viewModel.acceptStreakRequest(it) },
                     onReject = { viewModel.rejectStreakRequest(it) },
                     onCancel = { viewModel.cancelStreakRequest(it) },
-                    onDeleteStreak = { viewModel.deleteFriendStreak(it) },
-                    isVisible = isVisible
+                    onDeleteStreak = { viewModel.deleteFriendStreak(it) }
+                )
+            }
+        }
+        }
+        
+        // Floating Search Button above navbar
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 100.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = "Search",
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium,
+                color = glassColors.textSecondary
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Box(
+                modifier = Modifier
+                    .size(56.dp)
+                    .clip(CircleShape)
+                    .background(
+                        if (glassColors.isDark) Color.White else Color.Black
+                    )
+                    .clickable { showAddFriendDialog = true },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Search,
+                    contentDescription = "Search Friends",
+                    tint = if (glassColors.isDark) Color.Black else Color.White,
+                    modifier = Modifier.size(24.dp)
                 )
             }
         }
@@ -249,21 +261,14 @@ private fun GlassTabRow(
     onTabSelected: (Int) -> Unit,
     badgeCounts: List<Int>
 ) {
+    val backgroundColor = if (glassColors.isDark) Color(0xFF1C1C1E) else Color(0xFFF2F2F7)
+    
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 20.dp)
             .clip(RoundedCornerShape(16.dp))
-            .hazeChild(
-                state = hazeState,
-                style = HazeStyle(
-                    backgroundColor = if (glassColors.isDark) Color.Black else Color.White,
-                    blurRadius = 20.dp,
-                    tint = HazeTint(if (glassColors.isDark) Color(0x30000000) else Color(0x30FFFFFF)),
-                    noiseFactor = 0.02f
-                )
-            )
-            .background(if (glassColors.isDark) Color(0x15FFFFFF) else Color(0x40FFFFFF))
+            .background(backgroundColor)
     ) {
         TabRow(
             selectedTabIndex = selectedTabIndex,
@@ -272,7 +277,7 @@ private fun GlassTabRow(
             indicator = { tabPositions ->
                 TabRowDefaults.SecondaryIndicator(
                     modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTabIndex]),
-                    color = if (glassColors.isDark) Color.White else Color(0xFFE91E8C)
+                    color = glassColors.textPrimary
                 )
             },
             divider = {}
@@ -296,7 +301,7 @@ private fun GlassTabRow(
                                         .clip(CircleShape)
                                         .background(
                                             if (selectedTabIndex == index)
-                                                (if (glassColors.isDark) Color.White else Color(0xFFE91E8C))
+                                                glassColors.textPrimary
                                             else
                                                 glassColors.textSecondary.copy(alpha = 0.3f)
                                         ),
@@ -330,8 +335,7 @@ private fun FriendsListTab(
     glassColors: GlassColors,
     onFriendClick: (FriendItem) -> Unit,
     onRemoveFriend: (FriendItem) -> Unit,
-    onStartStreak: (FriendItem) -> Unit,
-    isVisible: Boolean
+    onStartStreak: (FriendItem) -> Unit
 ) {
     if (friends.isEmpty()) {
         EmptyState(
@@ -346,31 +350,12 @@ private fun FriendsListTab(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             itemsIndexed(friends) { index, friend ->
-                AnimatedVisibility(
-                    visible = isVisible,
-                    enter = fadeIn() + slideInVertically(
-                        animationSpec = spring(
-                            dampingRatio = Spring.DampingRatioMediumBouncy,
-                            stiffness = Spring.StiffnessLow
-                        ),
-                        initialOffsetY = { 100 }
-                    )
-                ) {
-                    var showCard by remember { mutableStateOf(false) }
-                    LaunchedEffect(Unit) {
-                        delay(index * 60L)
-                        showCard = true
-                    }
-
-                    if (showCard) {
-                        FriendCard(
-                            friend = friend,
-                            hazeState = hazeState,
-                            glassColors = glassColors,
-                            onClick = { onFriendClick(friend) }
-                        )
-                    }
-                }
+                FriendCard(
+                    friend = friend,
+                    hazeState = hazeState,
+                    glassColors = glassColors,
+                    onClick = { onFriendClick(friend) }
+                )
             }
             item { Spacer(modifier = Modifier.height(100.dp)) }
         }
@@ -389,27 +374,19 @@ private fun FriendCard(
 
     // Generate a color based on username hash
     val profileColor = remember(friend.username) {
-        val colors = listOf(
-            Color(0xFF6366F1), Color(0xFF10B981), Color(0xFFF59E0B),
-            Color(0xFFEF4444), Color(0xFF8B5CF6), Color(0xFFEC4899)
+        val colors = if (glassColors.isDark) listOf(
+            Color(0xFFFFFFFF), Color(0xFFCCCCCC), Color(0xFFAAAAAA),
+            Color(0xFF888888), Color(0xFF666666), Color(0xFF444444)
+        ) else listOf(
+            Color(0xFF000000), Color(0xFF333333), Color(0xFF555555),
+            Color(0xFF777777), Color(0xFF999999), Color(0xFFBBBBBB)
         )
         colors[friend.username.hashCode().mod(colors.size).let { if (it < 0) it + colors.size else it }]
     }
 
-    var isPressed by remember { mutableStateOf(false) }
-    val scale by animateFloatAsState(
-        targetValue = if (isPressed) 0.98f else 1f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessMedium
-        ),
-        label = "cardScale"
-    )
-
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .scale(scale)
             .clip(RoundedCornerShape(20.dp))
             .hazeChild(
                 state = hazeState,
@@ -421,12 +398,7 @@ private fun FriendCard(
                 )
             )
             .background(if (glassColors.isDark) Color(0x15FFFFFF) else Color(0x40FFFFFF))
-            .clickable(
-                onClick = {
-                    isPressed = true
-                    onClick()
-                }
-            )
+            .clickable(onClick = onClick)
             .padding(16.dp)
     ) {
         Row(
@@ -483,7 +455,7 @@ private fun FriendCard(
                         Icon(
                             imageVector = Icons.Default.LocalFireDepartment,
                             contentDescription = "Streak",
-                            tint = Color(0xFFFF6B35),
+                            tint = glassColors.textPrimary,
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
@@ -500,7 +472,7 @@ private fun FriendCard(
                         Icon(
                             imageVector = Icons.Default.Star,
                             contentDescription = "XP",
-                            tint = Color(0xFFFBBF24),
+                            tint = glassColors.textPrimary,
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
@@ -543,8 +515,7 @@ private fun RequestsTab(
     glassColors: GlassColors,
     onAccept: (Int) -> Unit,
     onReject: (Int) -> Unit,
-    onCancel: (Int) -> Unit,
-    isVisible: Boolean
+    onCancel: (Int) -> Unit
 ) {
     if (receivedRequests.isEmpty() && sentRequests.isEmpty()) {
         EmptyState(
@@ -628,9 +599,12 @@ private fun RequestCard(
     val cardTint = if (glassColors.isDark) Color(0x30000000) else Color(0x30FFFFFF)
 
     val profileColor = remember(username) {
-        val colors = listOf(
-            Color(0xFF6366F1), Color(0xFF10B981), Color(0xFFF59E0B),
-            Color(0xFFEF4444), Color(0xFF8B5CF6), Color(0xFFEC4899)
+        val colors = if (glassColors.isDark) listOf(
+            Color(0xFFFFFFFF), Color(0xFFCCCCCC), Color(0xFFAAAAAA),
+            Color(0xFF888888), Color(0xFF666666), Color(0xFF444444)
+        ) else listOf(
+            Color(0xFF000000), Color(0xFF333333), Color(0xFF555555),
+            Color(0xFF777777), Color(0xFF999999), Color(0xFFBBBBBB)
         )
         colors[username.hashCode().mod(colors.size).let { if (it < 0) it + colors.size else it }]
     }
@@ -707,12 +681,12 @@ private fun RequestCard(
                     modifier = Modifier
                         .size(36.dp)
                         .clip(CircleShape)
-                        .background(Color(0xFF22C55E).copy(alpha = 0.2f))
+                        .background(glassColors.textPrimary.copy(alpha = 0.2f))
                 ) {
                     Icon(
                         imageVector = Icons.Default.Check,
                         contentDescription = "Accept",
-                        tint = Color(0xFF22C55E),
+                        tint = glassColors.textPrimary,
                         modifier = Modifier.size(18.dp)
                     )
                 }
@@ -722,12 +696,12 @@ private fun RequestCard(
                     modifier = Modifier
                         .size(36.dp)
                         .clip(CircleShape)
-                        .background(Color(0xFFEF4444).copy(alpha = 0.2f))
+                        .background(glassColors.textSecondary.copy(alpha = 0.2f))
                 ) {
                     Icon(
                         imageVector = Icons.Default.Close,
                         contentDescription = "Reject",
-                        tint = Color(0xFFEF4444),
+                        tint = glassColors.textSecondary,
                         modifier = Modifier.size(18.dp)
                     )
                 }
@@ -761,8 +735,7 @@ private fun StreaksTab(
     onAccept: (Int) -> Unit,
     onReject: (Int) -> Unit,
     onCancel: (Int) -> Unit,
-    onDeleteStreak: (String) -> Unit,
-    isVisible: Boolean
+    onDeleteStreak: (String) -> Unit
 ) {
     if (friendStreaks.isEmpty() && receivedRequests.isEmpty() && sentRequests.isEmpty()) {
         EmptyState(

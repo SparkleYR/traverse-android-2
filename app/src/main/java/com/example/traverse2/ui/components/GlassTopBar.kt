@@ -48,40 +48,16 @@ fun GlassTopBar(
     Box(
         modifier = modifier.fillMaxWidth()
     ) {
-        // Glassy blur background - no solid color, pure blur
+        // Solid background
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(topPadding + 70.dp)
-                .hazeChild(
-                    state = hazeState,
-                    style = HazeStyle(
-                        backgroundColor = Color.Transparent,
-                        blurRadius = 16.dp,
-                        tints = listOf(
-                            HazeTint(
-                                color = if (glassColors.isDark) 
-                                    Color(0x18000000) else Color(0x20FFFFFF)
-                            )
-                        ),
-                        noiseFactor = 0.01f
-                    )
-                )
-        )
-        
-        // Gradient fade at the bottom for smooth transition (no hard edge)
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(30.dp)
-                .align(Alignment.BottomCenter)
                 .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            if (glassColors.isDark) Color(0x20000000) else Color(0x25FFFFFF),
-                            Color.Transparent
-                        )
-                    )
+                    if (glassColors.isDark) 
+                        Color(0xFF1C1C1E)
+                    else 
+                        Color(0xFFF2F2F7)
                 )
         )
         
