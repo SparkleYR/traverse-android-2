@@ -94,9 +94,9 @@ fun ProblemsScreen(
     val uiState by viewModel.uiState.collectAsState()
     val pullToRefreshState = rememberPullToRefreshState()
     
-    val progressColor = if (glassColors.isDark) Color.White else Color(0xFFE91E8C)
-    val trackColor = if (glassColors.isDark) Color(0x30FFFFFF) else Color(0x30E91E8C)
-    val successColor = Color(0xFF22C55E)
+    val progressColor = glassColors.textPrimary
+    val trackColor = glassColors.textSecondary.copy(alpha = 0.3f)
+    val successColor = glassColors.textPrimary
     
     Box(modifier = Modifier.fillMaxSize()) {
         when {
@@ -209,7 +209,7 @@ fun ProblemsScreen(
                                     text = "${stats?.totalXp ?: 0}",
                                     fontSize = 32.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = if (glassColors.isDark) Color(0xFFFBBF24) else Color(0xFFE91E8C)
+                                    color = glassColors.textPrimary
                                 )
                                 Text(
                                     text = "Total XP",
@@ -284,6 +284,7 @@ fun ProblemsScreen(
                             }
                         }
                     }
+                    }
                 }
             }
         }
@@ -294,7 +295,7 @@ fun ProblemsScreen(
             glassColors = glassColors,
             onBack = onBack,
             icon = Icons.Default.Code,
-            iconTint = if (glassColors.isDark) Color.White else Color(0xFFE91E8C)
+            iconTint = glassColors.textPrimary
         )
     }
 }
@@ -305,23 +306,13 @@ private fun GlassCard(
     glassColors: GlassColors,
     content: @Composable () -> Unit
 ) {
-    val cardBackground = if (glassColors.isDark) Color.Black else Color.White
-    val cardTint = if (glassColors.isDark) Color(0x30000000) else Color(0x30FFFFFF)
+    val backgroundColor = if (glassColors.isDark) Color(0xFF1C1C1E) else Color(0xFFF2F2F7)
     
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(24.dp))
-            .hazeChild(
-                state = hazeState,
-                style = HazeStyle(
-                    backgroundColor = cardBackground,
-                    blurRadius = 24.dp,
-                    tint = HazeTint(cardTint),
-                    noiseFactor = 0.02f
-                )
-            )
-            .background(if (glassColors.isDark) Color(0x15FFFFFF) else Color(0x40FFFFFF))
+            .background(backgroundColor)
             .padding(24.dp)
     ) {
         content()
@@ -360,9 +351,9 @@ private fun SolveListItem(
     var isExpanded by remember { mutableStateOf(false) }
     
     val difficultyColor = when (solve.problem.difficulty?.lowercase()) {
-        "easy" -> Color(0xFF22C55E)
-        "medium" -> Color(0xFFFBBF24)
-        "hard" -> Color(0xFFEF4444)
+        "easy" -> glassColors.textSecondary
+        "medium" -> glassColors.textPrimary
+        "hard" -> glassColors.textPrimary
         else -> glassColors.textSecondary
     }
     
@@ -396,7 +387,7 @@ private fun SolveListItem(
                 Icon(
                     imageVector = Icons.Default.CheckCircle,
                     contentDescription = "Solved",
-                    tint = Color(0xFF22C55E),
+                    tint = glassColors.textPrimary,
                     modifier = Modifier.size(22.dp)
                 )
                 Spacer(modifier = Modifier.width(12.dp))
@@ -483,7 +474,7 @@ private fun SolveListItem(
                     icon = null,
                     label = "XP Earned",
                     value = "+${solve.xpAwarded} XP",
-                    valueColor = Color(0xFFFBBF24),
+                    valueColor = glassColors.textPrimary,
                     glassColors = glassColors
                 )
                 
@@ -540,7 +531,7 @@ private fun SolveListItem(
                             verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             submission.mistakeTags.forEach { tag ->
-                                TagChip(tag, Color(0xFFEF4444), glassColors)
+                                TagChip(tag, glassColors.textPrimary, glassColors)
                             }
                         }
                         Spacer(modifier = Modifier.height(8.dp))
@@ -602,10 +593,6 @@ private fun SolveListItem(
                                 lineHeight = 18.sp
                             )
                         }
-                    }
-                }
-            }
-        }
                     }
                 }
             }

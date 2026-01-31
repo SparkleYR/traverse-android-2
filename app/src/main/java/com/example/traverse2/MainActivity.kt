@@ -12,10 +12,6 @@ import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -23,9 +19,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
@@ -162,30 +155,21 @@ fun TraverseApp(onLoginSuccess: () -> Unit = {}) {
     val sessionManager = remember { SessionManager.getInstance(context) }
     val navController = rememberNavController()
 
+    // Check local session - collect from flow (fast, local DataStore)
+    val isLoggedIn by sessionManager.isLoggedIn.collectAsState(initial = false)
+    var authChecked by remember { mutableStateOf(false) }
     var authState by remember { mutableStateOf<AuthState>(AuthState.Loading) }
     var hasNavigated by remember { mutableStateOf(false) }
 
-    // Check auth state on launch
-    LaunchedEffect(Unit) {
-        val isLoggedIn = sessionManager.isLoggedInSync()
-        if (isLoggedIn) {
-            // Verify session is still valid with backend
-            try {
-                val response = RetrofitClient.api.getCurrentUser()
-                if (response.isSuccessful && response.body() != null) {
-                    authState = AuthState.LoggedIn
-                } else {
-                    // Session expired - clear it
-                    sessionManager.clearSession()
-                    RetrofitClient.clearCookies()
-                    authState = AuthState.LoggedOut
-                }
-            } catch (e: Exception) {
-                // Network error - assume still logged in (offline mode)
-                authState = AuthState.LoggedIn
+    // Set auth state once we have the local value
+    LaunchedEffect(isLoggedIn) {
+        if (!authChecked) {
+            kotlinx.coroutines.delay(50)
+            authChecked = true
+            authState = if (isLoggedIn) AuthState.LoggedIn else AuthState.LoggedOut
+            if (isLoggedIn) {
+                onLoginSuccess()
             }
-        } else {
-            authState = AuthState.LoggedOut
         }
     }
 
@@ -198,7 +182,6 @@ fun TraverseApp(onLoginSuccess: () -> Unit = {}) {
                     navController.navigate("home") {
                         popUpTo("login") { inclusive = true }
                     }
-                    onLoginSuccess()
                 }
                 AuthState.LoggedOut -> {
                     // Already at login, do nothing
@@ -208,17 +191,8 @@ fun TraverseApp(onLoginSuccess: () -> Unit = {}) {
         }
     }
 
-    // Show loading while checking auth
+    // Show nothing briefly while auth state loads (just ~50ms for DataStore)
     if (authState == AuthState.Loading) {
-        val isDark = TraverseTheme.glassColors.isDark
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(if (isDark) Color.Black else Color(0xFFFDF2F8)),
-            contentAlignment = Alignment.Center
-        ) {
-            CircularProgressIndicator(color = TraverseTheme.glassColors.textPrimary)
-        }
         return
     }
 

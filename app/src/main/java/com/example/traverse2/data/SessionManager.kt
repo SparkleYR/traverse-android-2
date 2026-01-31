@@ -20,6 +20,7 @@ class SessionManager(private val context: Context) {
         private val USERNAME = stringPreferencesKey("username")
         private val USER_ID = stringPreferencesKey("user_id")
         private val LAST_SOLVE_TIME = stringPreferencesKey("last_solve_time")
+        private val AUTH_TOKEN = stringPreferencesKey("auth_token")
 
         @Volatile
         private var instance: SessionManager? = null
@@ -47,15 +48,32 @@ class SessionManager(private val context: Context) {
         preferences[LAST_SOLVE_TIME]
     }
 
+    val authToken: Flow<String?> = context.dataStore.data.map { preferences ->
+        preferences[AUTH_TOKEN]
+    }
+
+    suspend fun getAuthTokenSync(): String? {
+        return context.dataStore.data.first()[AUTH_TOKEN]
+    }
+
     suspend fun isLoggedInSync(): Boolean {
         return context.dataStore.data.first()[IS_LOGGED_IN] ?: false
     }
 
-    suspend fun saveSession(username: String, userId: String) {
+    suspend fun saveSession(username: String, userId: String, token: String? = null) {
         context.dataStore.edit { preferences ->
             preferences[IS_LOGGED_IN] = true
             preferences[USERNAME] = username
             preferences[USER_ID] = userId
+            if (token != null) {
+                preferences[AUTH_TOKEN] = token
+            }
+        }
+    }
+
+    suspend fun saveAuthToken(token: String) {
+        context.dataStore.edit { preferences ->
+            preferences[AUTH_TOKEN] = token
         }
     }
 

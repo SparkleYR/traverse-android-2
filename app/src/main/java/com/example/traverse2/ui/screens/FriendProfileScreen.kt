@@ -92,9 +92,12 @@ fun FriendProfileScreen(
 
     // Generate profile color from username
     val profileColor = remember(friend.username) {
-        val colors = listOf(
-            Color(0xFF6366F1), Color(0xFF10B981), Color(0xFFF59E0B),
-            Color(0xFFEF4444), Color(0xFF8B5CF6), Color(0xFFEC4899)
+        val colors = if (glassColors.isDark) listOf(
+            Color(0xFFFFFFFF), Color(0xFFCCCCCC), Color(0xFFAAAAAA),
+            Color(0xFF888888), Color(0xFF666666), Color(0xFF444444)
+        ) else listOf(
+            Color(0xFF000000), Color(0xFF333333), Color(0xFF555555),
+            Color(0xFF777777), Color(0xFF999999), Color(0xFFBBBBBB)
         )
         colors[friend.username.hashCode().mod(colors.size).let { if (it < 0) it + colors.size else it }]
     }
@@ -106,7 +109,7 @@ fun FriendProfileScreen(
                 contentAlignment = Alignment.Center
             ) {
                 CircularProgressIndicator(
-                    color = if (glassColors.isDark) Color.White else Color(0xFFE91E8C)
+                    color = glassColors.textPrimary
                 )
             }
         } else {
@@ -211,23 +214,13 @@ private fun GlassCard(
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit
 ) {
-    val cardBackground = if (glassColors.isDark) Color.Black else Color.White
-    val cardTint = if (glassColors.isDark) Color(0x30000000) else Color(0x30FFFFFF)
+    val backgroundColor = if (glassColors.isDark) Color(0xFF1C1C1E) else Color(0xFFF2F2F7)
 
     Box(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(24.dp))
-            .hazeChild(
-                state = hazeState,
-                style = HazeStyle(
-                    backgroundColor = cardBackground,
-                    blurRadius = 24.dp,
-                    tint = HazeTint(cardTint),
-                    noiseFactor = 0.02f
-                )
-            )
-            .background(if (glassColors.isDark) Color(0x15FFFFFF) else Color(0x40FFFFFF))
+            .background(backgroundColor)
             .padding(24.dp)
     ) {
         content()
@@ -296,7 +289,7 @@ private fun ProfileHeaderCard(
                     icon = Icons.Default.LocalFireDepartment,
                     value = "${stats?.currentStreak ?: 0}",
                     label = "Streak",
-                    iconColor = Color(0xFFFF6B35),
+                    iconColor = glassColors.textPrimary,
                     glassColors = glassColors
                 )
 
@@ -304,7 +297,7 @@ private fun ProfileHeaderCard(
                     icon = Icons.Default.Star,
                     value = "${stats?.totalXp ?: 0}",
                     label = "XP",
-                    iconColor = Color(0xFFFBBF24),
+                    iconColor = glassColors.textPrimary,
                     glassColors = glassColors
                 )
             }
@@ -371,7 +364,7 @@ private fun StatsGridCard(
                     icon = Icons.Default.CheckCircle,
                     value = "${stats?.totalSolves ?: 0}",
                     label = "Total Solves",
-                    iconColor = Color(0xFF22C55E),
+                    iconColor = glassColors.textPrimary,
                     glassColors = glassColors,
                     modifier = Modifier.weight(1f)
                 )
@@ -381,7 +374,7 @@ private fun StatsGridCard(
                     icon = Icons.Default.LocalFireDepartment,
                     value = "${stats?.currentStreak ?: 0}",
                     label = "Current Streak",
-                    iconColor = Color(0xFFFF6B35),
+                    iconColor = glassColors.textPrimary,
                     glassColors = glassColors,
                     modifier = Modifier.weight(1f)
                 )
@@ -398,7 +391,7 @@ private fun StatsGridCard(
                     icon = Icons.Default.Code,
                     value = "${stats?.totalStreakDays ?: 0}",
                     label = "Total Active Days",
-                    iconColor = Color(0xFF6366F1),
+                    iconColor = glassColors.textPrimary,
                     glassColors = glassColors,
                     modifier = Modifier.weight(1f)
                 )
@@ -408,7 +401,7 @@ private fun StatsGridCard(
                     icon = Icons.Default.Star,
                     value = "${stats?.totalXp ?: 0}",
                     label = "Total XP",
-                    iconColor = Color(0xFFFBBF24),
+                    iconColor = glassColors.textPrimary,
                     glassColors = glassColors,
                     modifier = Modifier.weight(1f)
                 )
@@ -434,21 +427,21 @@ private fun StatsGridCard(
                     DifficultyBadge(
                         label = "Easy",
                         count = stats.byDifficulty["easy"] ?: 0,
-                        color = Color(0xFF22C55E),
+                        color = glassColors.textSecondary,
                         glassColors = glassColors,
                         modifier = Modifier.weight(1f)
                     )
                     DifficultyBadge(
                         label = "Medium",
                         count = stats.byDifficulty["medium"] ?: 0,
-                        color = Color(0xFFFBBF24),
+                        color = glassColors.textPrimary,
                         glassColors = glassColors,
                         modifier = Modifier.weight(1f)
                     )
                     DifficultyBadge(
                         label = "Hard",
                         count = stats.byDifficulty["hard"] ?: 0,
-                        color = Color(0xFFEF4444),
+                        color = glassColors.textPrimary,
                         glassColors = glassColors,
                         modifier = Modifier.weight(1f)
                     )
@@ -555,7 +548,7 @@ private fun RecentSolvesSection(
                     Icon(
                         imageVector = Icons.Default.Code,
                         contentDescription = "Recent Solves",
-                        tint = if (glassColors.isDark) Color.White else Color(0xFFE91E8C),
+                        tint = glassColors.textPrimary,
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
@@ -615,9 +608,9 @@ private fun SolveDetailCard(
 
     val difficulty = solve.problem.difficulty ?: "unknown"
     val difficultyColor = when (difficulty.lowercase()) {
-        "easy" -> Color(0xFF22C55E)
-        "medium" -> Color(0xFFFBBF24)
-        "hard" -> Color(0xFFEF4444)
+        "easy" -> glassColors.textSecondary
+        "medium" -> glassColors.textPrimary
+        "hard" -> glassColors.textPrimary
         else -> glassColors.textSecondary
     }
 

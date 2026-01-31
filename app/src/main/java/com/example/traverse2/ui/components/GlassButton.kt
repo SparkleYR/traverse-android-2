@@ -49,18 +49,10 @@ fun GlassButton(
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     
-    // Theme-aware glass style for button
-    val buttonGlassStyle = HazeStyle(
-        backgroundColor = if (glassColors.isDark) Color.Black else Color.White,
-        blurRadius = 16.dp,
-        tint = HazeTint(
-            color = if (glassColors.isDark) 
-                Color.White.copy(alpha = 0.12f) 
-            else 
-                Color.White.copy(alpha = 0.8f)
-        ),
-        noiseFactor = if (glassColors.isDark) 0.03f else 0.01f
-    )
+    val glassBackgroundColor = if (glassColors.isDark) 
+        Color(0xFF2C2C2E)
+    else 
+        Color(0xFFE5E5EA)
     
     // Scale animation on press
     val scale by animateFloatAsState(
@@ -100,10 +92,7 @@ fun GlassButton(
             .clip(RoundedCornerShape(16.dp))
             .then(
                 if (showGlass) {
-                    Modifier.hazeChild(
-                        state = hazeState,
-                        style = buttonGlassStyle
-                    )
+                    Modifier.background(glassBackgroundColor)
                 } else {
                     Modifier
                 }

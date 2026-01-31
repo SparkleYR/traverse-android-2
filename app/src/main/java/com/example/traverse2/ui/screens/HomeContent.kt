@@ -1,18 +1,5 @@
 package com.example.traverse2.ui.screens
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
-import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -43,8 +30,6 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.EmojiEvents
-import androidx.compose.material.icons.filled.ExpandLess
-import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.Lock
@@ -57,12 +42,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -88,7 +70,6 @@ import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.HazeTint
 import dev.chrisbanes.haze.hazeChild
-import kotlinx.coroutines.delay
 import java.time.Instant
 import java.time.ZoneId
 import java.time.temporal.ChronoUnit
@@ -120,9 +101,6 @@ fun HomeContent(
     val scrollState = rememberScrollState()
     val uiState by viewModel.uiState.collectAsState()
     val pullToRefreshState = rememberPullToRefreshState()
-    
-    var isVisible by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) { isVisible = true }
     
     // Show loading indicator
     if (uiState.isLoading) {
@@ -168,12 +146,7 @@ fun HomeContent(
     
     val platforms = if (solveStats != null) {
         solveStats.byPlatform.map { (name, count) ->
-            val color = when (name.lowercase()) {
-                "leetcode" -> Color(0xFFFFA116)
-                "hackerrank" -> Color(0xFF00EA64)
-                "codeforces" -> Color(0xFF1890FF)
-                else -> Color.Gray
-            }
+            val color = if (glassColors.isDark) Color.White else Color.Black
             PlatformData(name, count, color)
         }
     } else {
@@ -240,10 +213,6 @@ fun HomeContent(
                 .padding(horizontal = 20.dp)
                 .padding(top = 60.dp, bottom = 120.dp)
         ) {
-        AnimatedVisibility(
-            visible = isVisible,
-            enter = fadeIn(tween(300)) + slideInVertically(tween(300)) { -20 }
-        ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -263,15 +232,14 @@ fun HomeContent(
                     )
                 }
             }
-        }
         
         Spacer(modifier = Modifier.height(24.dp))
         
-        AnimatedCard(delay = 50, isVisible = isVisible) {
-            StreakCard(
-                streak = user.currentStreak,
-                hazeState = hazeState,
-                onClick = {
+        StreakCard(
+            streak = user.currentStreak,
+            hazeState = hazeState,
+            glassColors = glassColors,
+            onClick = {
                     // Generate streak days from calendarSolveDates
                     val today = LocalDate.now()
                     val calendarSolveDates = uiState.calendarSolveDates
@@ -294,87 +262,68 @@ fun HomeContent(
                     )
                 }
             )
-        }
         
         Spacer(modifier = Modifier.height(20.dp))
         
-        AnimatedCard(delay = 100, isVisible = isVisible) {
-            YourWorkCard(
-                totalSolves = solveStats?.totalSolves ?: 0,
-                totalXp = user.totalXp,
-                streak = user.currentStreak,
-                hazeState = hazeState,
-                glassColors = glassColors
-            )
-        }
+        YourWorkCard(
+            totalSolves = solveStats?.totalSolves ?: 0,
+            totalXp = user.totalXp,
+            streak = user.currentStreak,
+            hazeState = hazeState,
+            glassColors = glassColors
+        )
         
         Spacer(modifier = Modifier.height(20.dp))
         
         // Problems Summary Card - click to see full details
-        AnimatedCard(delay = 130, isVisible = isVisible) {
-            ProblemsSummaryCard(
-                completed = problemsCompleted,
-                total = totalProblems,
-                hazeState = hazeState,
-                glassColors = glassColors,
-                onClick = onNavigateToProblems
-            )
-        }
+        ProblemsSummaryCard(
+            completed = problemsCompleted,
+            total = totalProblems,
+            hazeState = hazeState,
+            glassColors = glassColors,
+            onClick = onNavigateToProblems
+        )
         
         Spacer(modifier = Modifier.height(20.dp))
         
         if (difficultyData.easy + difficultyData.medium + difficultyData.hard > 0) {
-            AnimatedCard(delay = 160, isVisible = isVisible) {
-                DifficultyCard(difficultyData, hazeState, glassColors)
-            }
+            DifficultyCard(difficultyData, hazeState, glassColors)
             Spacer(modifier = Modifier.height(20.dp))
         }
         
         if (platforms.isNotEmpty()) {
-            AnimatedCard(delay = 190, isVisible = isVisible) {
-                PlatformsCard(platforms, hazeState, glassColors)
-            }
+            PlatformsCard(platforms, hazeState, glassColors)
             Spacer(modifier = Modifier.height(20.dp))
         }
         
         if (submissionStatsData != null && submissionStatsData.total > 0) {
-            AnimatedCard(delay = 220, isVisible = isVisible) {
-                SubmissionStatsCard(submissionStatsData, hazeState, glassColors)
-            }
+            SubmissionStatsCard(submissionStatsData, hazeState, glassColors)
             Spacer(modifier = Modifier.height(20.dp))
         }
         
         // ProblemDistributionCard - no backend support yet, using mock data
-        AnimatedCard(delay = 250, isVisible = isVisible) {
-            ProblemDistributionCard(categories, hazeState, glassColors)
-        }
+        ProblemDistributionCard(categories, hazeState, glassColors)
         
         Spacer(modifier = Modifier.height(20.dp))
         
         // TimePerformanceCard - no backend support yet, using mock data
-        AnimatedCard(delay = 280, isVisible = isVisible) {
-            TimePerformanceCard(avgSolveTime, bestTime, totalTime, hazeState, glassColors)
-        }
+        TimePerformanceCard(avgSolveTime, bestTime, totalTime, hazeState, glassColors)
         
         Spacer(modifier = Modifier.height(20.dp))
         
         if (recentSolvesData.isNotEmpty()) {
-            AnimatedCard(delay = 310, isVisible = isVisible) {
-                RecentSolvesCard(recentSolvesData, hazeState, glassColors)
-            }
+            RecentSolvesCard(recentSolvesData, hazeState, glassColors)
             Spacer(modifier = Modifier.height(20.dp))
         }
         
         // Achievements Section - Always show the card
-        AnimatedCard(delay = 340, isVisible = isVisible) {
-            if (achievementsData.isNotEmpty()) {
-                AchievementsSection(achievementsData, hazeState, glassColors) {
-                    onAchievementsDataReady(achievementsData)
-                }
-            } else {
-                EmptyAchievementsSection(hazeState = hazeState, glassColors = glassColors) {
-                    onAchievementsDataReady(emptyList())
-                }
+        if (achievementsData.isNotEmpty()) {
+            AchievementsSection(achievementsData, hazeState, glassColors) {
+                onAchievementsDataReady(achievementsData)
+            }
+        } else {
+            EmptyAchievementsSection(hazeState = hazeState, glassColors = glassColors) {
+                onAchievementsDataReady(emptyList())
             }
         }
         }
@@ -403,48 +352,19 @@ private fun calculateTimeAgo(isoString: String): String {
 }
 
 @Composable
-private fun AnimatedCard(delay: Int, isVisible: Boolean, content: @Composable () -> Unit) {
-    var showCard by remember { mutableStateOf(false) }
-    LaunchedEffect(isVisible) {
-        if (isVisible) {
-            delay(delay.toLong())
-            showCard = true
-        }
-    }
-    AnimatedVisibility(
-        visible = showCard,
-        enter = fadeIn(tween(400)) + slideInVertically(
-            animationSpec = spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessLow)
-        ) { 50 }
-    ) {
-        content()
-    }
-}
-
-@Composable
 private fun GlassCardContainer(
     hazeState: HazeState,
     glassColors: GlassColors,
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit
 ) {
-    val cardBackground = if (glassColors.isDark) Color.Black else Color.White
-    val cardTint = if (glassColors.isDark) Color(0x30000000) else Color(0x30FFFFFF)
+    val backgroundColor = if (glassColors.isDark) Color(0xFF1C1C1E) else Color(0xFFF2F2F7)
     
     Box(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(24.dp))
-            .hazeChild(
-                state = hazeState,
-                style = HazeStyle(
-                    backgroundColor = cardBackground,
-                    blurRadius = 24.dp,
-                    tint = HazeTint(cardTint),
-                    noiseFactor = 0.02f
-                )
-            )
-            .background(if (glassColors.isDark) Color(0x15FFFFFF) else Color(0x40FFFFFF))
+            .background(backgroundColor)
             .padding(24.dp)
     ) {
         content()
@@ -477,7 +397,7 @@ private fun CardHeader(title: String, icon: ImageVector, glassColors: GlassColor
         Icon(
             imageVector = icon,
             contentDescription = title,
-            tint = if (glassColors.isDark) Color.White else Color(0xFFE91E8C),
+            tint = glassColors.textPrimary,
             modifier = Modifier.size(20.dp)
         )
         Spacer(modifier = Modifier.width(8.dp))
@@ -491,7 +411,7 @@ private fun CardHeader(title: String, icon: ImageVector, glassColors: GlassColor
 }
 
 @Composable
-private fun StreakCard(streak: Int, hazeState: HazeState, onClick: () -> Unit = {}) {
+private fun StreakCard(streak: Int, hazeState: HazeState, glassColors: GlassColors, onClick: () -> Unit = {}) {
     val streakComment = when {
         streak == 0 -> "Start your streak today!"
         streak < 3 -> "Good start! Keep it going!"
@@ -505,20 +425,7 @@ private fun StreakCard(streak: Int, hazeState: HazeState, onClick: () -> Unit = 
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(24.dp))
-            .hazeChild(
-                state = hazeState,
-                style = HazeStyle(
-                    backgroundColor = Color(0xFFE91E8C),
-                    blurRadius = 20.dp,
-                    tint = HazeTint(Color(0x40E91E8C)),
-                    noiseFactor = 0.02f
-                )
-            )
-            .background(
-                brush = Brush.linearGradient(
-                    colors = listOf(Color(0x80E91E8C), Color(0x80A855F7))
-                )
-            )
+            .background(if (glassColors.isDark) Color.White else Color.Black)
             .clickable { onClick() }
             .padding(24.dp)
     ) {
@@ -527,13 +434,13 @@ private fun StreakCard(streak: Int, hazeState: HazeState, onClick: () -> Unit = 
                 Icon(
                     imageVector = Icons.Default.LocalFireDepartment,
                     contentDescription = "Streak",
-                    tint = Color.White,
+                    tint = if (glassColors.isDark) Color.Black else Color.White,
                     modifier = Modifier.size(32.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(text = "$streak", fontSize = 48.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                Text(text = "$streak", fontSize = 48.sp, fontWeight = FontWeight.Bold, color = if (glassColors.isDark) Color.Black else Color.White)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(text = "day streak", fontSize = 18.sp, color = Color.White.copy(alpha = 0.9f))
+                Text(text = "day streak", fontSize = 18.sp, color = (if (glassColors.isDark) Color.Black else Color.White).copy(alpha = 0.9f))
             }
             Spacer(modifier = Modifier.height(8.dp))
             Row(
@@ -541,8 +448,8 @@ private fun StreakCard(streak: Int, hazeState: HazeState, onClick: () -> Unit = 
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(text = streakComment, fontSize = 14.sp, color = Color.White.copy(alpha = 0.85f))
-                Text(text = "Tap for details", fontSize = 12.sp, color = Color.White.copy(alpha = 0.6f))
+                Text(text = streakComment, fontSize = 14.sp, color = (if (glassColors.isDark) Color.Black else Color.White).copy(alpha = 0.85f))
+                Text(text = "Tap for details", fontSize = 12.sp, color = (if (glassColors.isDark) Color.Black else Color.White).copy(alpha = 0.6f))
             }
         }
     }
@@ -582,25 +489,13 @@ private fun StatColumn(icon: ImageVector, value: String, label: String, glassCol
 @Composable
 private fun DifficultyCard(data: DifficultyData, hazeState: HazeState, glassColors: GlassColors) {
     val total = data.easy + data.medium + data.hard
-    val easyProgress = remember { Animatable(0f) }
-    val mediumProgress = remember { Animatable(0f) }
-    val hardProgress = remember { Animatable(0f) }
+    val easyProgress = if (total > 0) data.easy.toFloat() / total else 0f
+    val mediumProgress = if (total > 0) data.medium.toFloat() / total else 0f
+    val hardProgress = if (total > 0) data.hard.toFloat() / total else 0f
     
-    LaunchedEffect(Unit) {
-        easyProgress.animateTo(data.easy.toFloat() / total, tween(800, easing = FastOutSlowInEasing))
-    }
-    LaunchedEffect(Unit) {
-        delay(100)
-        mediumProgress.animateTo(data.medium.toFloat() / total, tween(800, easing = FastOutSlowInEasing))
-    }
-    LaunchedEffect(Unit) {
-        delay(200)
-        hardProgress.animateTo(data.hard.toFloat() / total, tween(800, easing = FastOutSlowInEasing))
-    }
-    
-    val easyColor = Color(0xFF22C55E)
-    val mediumColor = Color(0xFFFBBF24)
-    val hardColor = Color(0xFFEF4444)
+    val easyColor = if (glassColors.isDark) Color(0xFFCCCCCC) else Color(0xFF333333)
+    val mediumColor = if (glassColors.isDark) Color(0xFF999999) else Color(0xFF666666)
+    val hardColor = if (glassColors.isDark) Color(0xFF666666) else Color(0xFF999999)
     
     GlassCardContainer(hazeState = hazeState, glassColors = glassColors) {
         Column {
@@ -612,18 +507,18 @@ private fun DifficultyCard(data: DifficultyData, hazeState: HazeState, glassColo
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.Bottom
             ) {
-                DifficultyBar("Easy", data.easy, easyProgress.value, easyColor, glassColors)
-                DifficultyBar("Medium", data.medium, mediumProgress.value, mediumColor, glassColors)
-                DifficultyBar("Hard", data.hard, hardProgress.value, hardColor, glassColors)
+                DifficultyBar("Easy", data.easy, easyProgress, easyColor, glassColors)
+                DifficultyBar("Medium", data.medium, mediumProgress, mediumColor, glassColors)
+                DifficultyBar("Hard", data.hard, hardProgress, hardColor, glassColors)
             }
             
             Spacer(modifier = Modifier.height(16.dp))
             
             GlassSubsection(glassColors = glassColors) {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                    DifficultyPill("Easy", (data.easy * 100 / total), easyColor)
-                    DifficultyPill("Medium", (data.medium * 100 / total), mediumColor)
-                    DifficultyPill("Hard", (data.hard * 100 / total), hardColor)
+                    DifficultyPill("Easy", if (total > 0) (data.easy * 100 / total) else 0, easyColor)
+                    DifficultyPill("Medium", if (total > 0) (data.medium * 100 / total) else 0, mediumColor)
+                    DifficultyPill("Hard", if (total > 0) (data.hard * 100 / total) else 0, hardColor)
                 }
             }
         }
@@ -633,7 +528,7 @@ private fun DifficultyCard(data: DifficultyData, hazeState: HazeState, glassColo
 @Composable
 private fun DifficultyBar(label: String, count: Int, progress: Float, color: Color, glassColors: GlassColors) {
     val maxHeight = 80.dp
-    val animatedHeight = maxHeight * progress * 2.5f
+    val barHeight = maxHeight * progress * 2.5f
     
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -649,7 +544,7 @@ private fun DifficultyBar(label: String, count: Int, progress: Float, color: Col
         Box(
             modifier = Modifier
                 .width(44.dp)
-                .height(animatedHeight.coerceAtMost(maxHeight))
+                .height(barHeight.coerceAtMost(maxHeight))
                 .clip(RoundedCornerShape(10.dp))
                 .background(color.copy(alpha = 0.85f))
         )
@@ -691,11 +586,7 @@ private fun PlatformsCard(platforms: List<PlatformData>, hazeState: HazeState, g
 
 @Composable
 private fun PlatformRow(platform: PlatformData, total: Int, glassColors: GlassColors) {
-    val progress by animateFloatAsState(
-        targetValue = platform.count.toFloat() / total,
-        animationSpec = tween(800, easing = FastOutSlowInEasing),
-        label = "platformProgress"
-    )
+    val progress = if (total > 0) platform.count.toFloat() / total else 0f
     
     Column {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -727,14 +618,10 @@ private fun PlatformRow(platform: PlatformData, total: Int, glassColors: GlassCo
 
 @Composable
 private fun SubmissionStatsCard(stats: SubmissionStats, hazeState: HazeState, glassColors: GlassColors) {
-    val acceptedProgress = remember { Animatable(0f) }
+    val acceptedProgress = if (stats.total > 0) stats.accepted.toFloat() / stats.total else 0f
     
-    LaunchedEffect(Unit) {
-        acceptedProgress.animateTo(stats.accepted.toFloat() / stats.total, tween(1000, easing = FastOutSlowInEasing))
-    }
-    
-    val acceptedColor = Color(0xFF22C55E)
-    val failedColor = Color(0xFFEF4444)
+    val acceptedColor = glassColors.textPrimary
+    val failedColor = glassColors.textSecondary
     
     GlassCardContainer(hazeState = hazeState, glassColors = glassColors) {
         Column {
@@ -750,7 +637,7 @@ private fun SubmissionStatsCard(stats: SubmissionStats, hazeState: HazeState, gl
             ) {
                 Box(
                     modifier = Modifier
-                        .fillMaxWidth(acceptedProgress.value)
+                        .fillMaxWidth(acceptedProgress)
                         .height(24.dp)
                         .background(acceptedColor)
                 )
@@ -777,7 +664,7 @@ private fun SubmissionStatsCard(stats: SubmissionStats, hazeState: HazeState, gl
                 }
                 GlassSubsection(glassColors, Modifier.weight(1f)) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-                        Icon(Icons.Default.Timeline, "Total", tint = if (glassColors.isDark) Color.White else Color(0xFFE91E8C), modifier = Modifier.size(24.dp))
+                        Icon(Icons.Default.Timeline, "Total", tint = glassColors.textPrimary, modifier = Modifier.size(24.dp))
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(stats.total.toString(), fontSize = 24.sp, fontWeight = FontWeight.Bold, color = glassColors.textPrimary)
                         Text("Total", fontSize = 11.sp, color = glassColors.textSecondary)
@@ -791,9 +678,12 @@ private fun SubmissionStatsCard(stats: SubmissionStats, hazeState: HazeState, gl
 @Composable
 private fun ProblemDistributionCard(categories: List<CategoryData>, hazeState: HazeState, glassColors: GlassColors) {
     val maxCount = categories.maxOfOrNull { it.count } ?: 1
-    val categoryColors = listOf(
-        Color(0xFF3B82F6), Color(0xFF8B5CF6), Color(0xFFEC4899),
-        Color(0xFFF97316), Color(0xFF14B8A6), Color(0xFF84CC16)
+    val categoryColors = if (glassColors.isDark) listOf(
+        Color(0xFFFFFFFF), Color(0xFFCCCCCC), Color(0xFFAAAAAA),
+        Color(0xFF888888), Color(0xFF666666), Color(0xFF444444)
+    ) else listOf(
+        Color(0xFF000000), Color(0xFF333333), Color(0xFF555555),
+        Color(0xFF777777), Color(0xFF999999), Color(0xFFBBBBBB)
     )
     
     GlassCardContainer(hazeState = hazeState, glassColors = glassColors) {
@@ -840,11 +730,7 @@ private fun CategoryChip(category: CategoryData, color: Color, glassColors: Glas
 
 @Composable
 private fun CategoryBar(category: CategoryData, maxCount: Int, color: Color, glassColors: GlassColors) {
-    val progress by animateFloatAsState(
-        targetValue = category.count.toFloat() / maxCount,
-        animationSpec = tween(800, easing = FastOutSlowInEasing),
-        label = "categoryProgress"
-    )
+    val progress = if (maxCount > 0) category.count.toFloat() / maxCount else 0f
     
     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Text(category.name, fontSize = 12.sp, color = glassColors.textSecondary, modifier = Modifier.width(60.dp))
@@ -877,7 +763,7 @@ private fun TimePerformanceCard(avgTime: String, bestTime: String, totalTime: St
             
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 FixedTimeStatBox(Icons.Default.AccessTime, avgTime, "Avg Solve", glassColors, null, Modifier.weight(1f))
-                FixedTimeStatBox(Icons.Default.Speed, bestTime, "Best Time", glassColors, Color(0xFF22C55E), Modifier.weight(1f))
+                FixedTimeStatBox(Icons.Default.Speed, bestTime, "Best Time", glassColors, glassColors.textPrimary, Modifier.weight(1f))
                 FixedTimeStatBox(Icons.Default.History, totalTime, "Total Time", glassColors, null, Modifier.weight(1f))
             }
         }
@@ -902,7 +788,7 @@ private fun FixedTimeStatBox(icon: ImageVector, value: String, label: String, gl
             verticalArrangement = Arrangement.Center,
             modifier = Modifier.padding(12.dp)
         ) {
-            Icon(icon, label, tint = accentColor ?: if (glassColors.isDark) Color.White else Color(0xFFE91E8C), modifier = Modifier.size(22.dp))
+            Icon(icon, label, tint = accentColor ?: glassColors.textPrimary, modifier = Modifier.size(22.dp))
             Spacer(modifier = Modifier.height(8.dp))
             Text(value, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = accentColor ?: glassColors.textPrimary, textAlign = TextAlign.Center)
             Text(label, fontSize = 10.sp, color = glassColors.textSecondary, textAlign = TextAlign.Center)
@@ -1218,14 +1104,8 @@ private fun ProblemsSummaryCard(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                // Animated circular progress
-                val progress = remember { Animatable(0f) }
-                LaunchedEffect(Unit) {
-                    progress.animateTo(
-                        if (total > 0) completed.toFloat() / total else 0f,
-                        tween(1200, easing = FastOutSlowInEasing)
-                    )
-                }
+                // Circular progress indicator
+                val progress = if (total > 0) completed.toFloat() / total else 0f
                 
                 Box(
                     modifier = Modifier.size(60.dp),
@@ -1233,7 +1113,7 @@ private fun ProblemsSummaryCard(
                 ) {
                     Canvas(modifier = Modifier.fillMaxSize()) {
                         drawArc(trackColor, -90f, 360f, false, style = Stroke(8.dp.toPx(), cap = StrokeCap.Round))
-                        drawArc(progressColor, -90f, 360f * progress.value, false, style = Stroke(8.dp.toPx(), cap = StrokeCap.Round))
+                        drawArc(progressColor, -90f, 360f * progress, false, style = Stroke(8.dp.toPx(), cap = StrokeCap.Round))
                     }
                     Text(
                         text = "$percentage%",

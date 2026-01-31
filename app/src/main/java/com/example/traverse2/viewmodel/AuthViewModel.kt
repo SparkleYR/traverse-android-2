@@ -4,7 +4,6 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.traverse2.data.SessionManager
-import com.example.traverse2.data.api.TraverseApi
 import com.example.traverse2.data.api.RetrofitClient
 import com.example.traverse2.data.model.LoginRequest
 import com.example.traverse2.data.model.RegisterRequest
@@ -23,7 +22,7 @@ sealed class AuthUiState {
 
 class AuthViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val api: TraverseApi = RetrofitClient.api
+    private val api = RetrofitClient.api
     private val sessionManager = SessionManager.getInstance(application)
 
     private val _uiState = MutableStateFlow<AuthUiState>(AuthUiState.Idle)
@@ -33,30 +32,8 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
     val isLoggedIn: StateFlow<Boolean> = _isLoggedIn.asStateFlow()
 
     init {
-        checkLoginStatus()
-    }
-
-    private fun checkLoginStatus() {
         viewModelScope.launch {
-            val loggedIn = sessionManager.isLoggedInSync()
-            _isLoggedIn.value = loggedIn
-
-            if (loggedIn) {
-                // Verify session is still valid by calling /auth/me
-                try {
-                    val response = api.getCurrentUser()
-                    if (response.isSuccessful && response.body() != null) {
-                        _uiState.value = AuthUiState.Success(response.body()!!.user)
-                    } else {
-                        // Session expired, clear it
-                        sessionManager.clearSession()
-                        _isLoggedIn.value = false
-                        _uiState.value = AuthUiState.Idle
-                    }
-                } catch (e: Exception) {
-                    // Network error, keep session but don't update state
-                }
-            }
+            _isLoggedIn.value = sessionManager.isLoggedInSync()
         }
     }
 
@@ -79,6 +56,9 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                         username = user.username,
                         userId = user.id.toString()
                     )
+                    
+                    // Save token from response body (backup for cookie)
+                    authResponse.token?.let { sessionManager.saveAuthToken(it) }
 
                     _isLoggedIn.value = true
                     _uiState.value = AuthUiState.Success(user)
@@ -127,6 +107,9 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                         username = user.username,
                         userId = user.id.toString()
                     )
+                    
+                    // Save token from response body (backup for cookie)
+                    authResponse.token?.let { sessionManager.saveAuthToken(it) }
 
                     _isLoggedIn.value = true
                     _uiState.value = AuthUiState.Success(user)

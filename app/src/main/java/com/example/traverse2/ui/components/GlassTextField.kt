@@ -50,6 +50,11 @@ fun GlassTextField(
     val glassColors = TraverseTheme.glassColors
     var isFocused by remember { mutableStateOf(false) }
     
+    val backgroundColor = if (glassColors.isDark) 
+        Color(0xFF2C2C2E)
+    else 
+        Color(0xFFE5E5EA)
+    
     // Animated border color on focus
     val borderColor by animateColorAsState(
         targetValue = if (isFocused) glassColors.accent else glassColors.glassBorder,
@@ -64,27 +69,11 @@ fun GlassTextField(
         label = "borderWidth"
     )
     
-    // Theme-aware glass style for text field
-    val textFieldStyle = HazeStyle(
-        backgroundColor = if (glassColors.isDark) Color.Black else Color.White,
-        blurRadius = 16.dp,
-        tint = HazeTint(
-            color = if (glassColors.isDark) 
-                Color.White.copy(alpha = 0.1f) 
-            else 
-                Color.White.copy(alpha = 0.8f)
-        ),
-        noiseFactor = if (glassColors.isDark) 0.03f else 0.01f
-    )
-    
     Box(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .hazeChild(
-                state = hazeState,
-                style = textFieldStyle
-            )
+            .background(backgroundColor)
             .border(borderWidth, borderColor, RoundedCornerShape(16.dp))
             .padding(horizontal = 20.dp, vertical = 18.dp)
     ) {

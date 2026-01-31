@@ -174,23 +174,13 @@ private fun GlassCard(
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit
 ) {
-    val cardBackground = if (glassColors.isDark) Color.Black else Color.White
-    val cardTint = if (glassColors.isDark) Color(0x30000000) else Color(0x30FFFFFF)
+    val backgroundColor = if (glassColors.isDark) Color(0xFF1C1C1E) else Color(0xFFF2F2F7)
     
     Box(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(24.dp))
-            .hazeChild(
-                state = hazeState,
-                style = HazeStyle(
-                    backgroundColor = cardBackground,
-                    blurRadius = 24.dp,
-                    tint = HazeTint(cardTint),
-                    noiseFactor = 0.02f
-                )
-            )
-            .background(if (glassColors.isDark) Color(0x15FFFFFF) else Color(0x40FFFFFF))
+            .background(backgroundColor)
             .padding(20.dp)
     ) {
         content()
@@ -222,7 +212,7 @@ private fun ProfileCard(
                                 colors = if (glassColors.isDark) {
                                     listOf(Color(0xFF3B3B3B), Color(0xFF1A1A1A))
                                 } else {
-                                    listOf(Color(0xFFE91E8C), Color(0xFFA855F7))
+                                    listOf(Color(0xFF2A2A2A), Color(0xFF000000))
                                 }
                             )
                         )
@@ -282,7 +272,7 @@ private fun ProfileCard(
                     icon = Icons.Default.LocalFireDepartment,
                     value = "$dayStreak",
                     label = "Day Streak",
-                    iconColor = Color(0xFFFF6B35),
+                    iconColor = glassColors.textPrimary,
                     glassColors = glassColors
                 )
                 
@@ -291,7 +281,7 @@ private fun ProfileCard(
                     icon = Icons.Default.Star,
                     value = "$totalXp",
                     label = "Total XP",
-                    iconColor = Color(0xFFFBBF24),
+                    iconColor = glassColors.textPrimary,
                     glassColors = glassColors
                 )
             }
@@ -359,8 +349,8 @@ private fun ThemeSwitcherCard(
                     isSelected = !isDarkMode,
                     title = "Light",
                     icon = Icons.Default.LightMode,
-                    gradientColors = listOf(Color(0xFFFCE7F3), Color(0xFFFDF2F8)),
-                    iconColor = Color(0xFFE91E8C),
+                    gradientColors = listOf(Color(0xFFF5F5F5), Color(0xFFE5E5E5)),
+                    iconColor = Color.Black,
                     onClick = { if (isDarkMode) ThemeState.toggleTheme() },
                     modifier = Modifier.weight(1f)
                 )
@@ -413,7 +403,7 @@ private fun ThemeOptionCard(
     
     val borderColor by animateColorAsState(
         targetValue = if (isSelected) {
-            if (glassColors.isDark) Color.White else Color(0xFFE91E8C)
+            glassColors.textPrimary
         } else {
             if (glassColors.isDark) Color.White.copy(alpha = 0.15f) else Color.Black.copy(alpha = 0.1f)
         },
@@ -492,7 +482,7 @@ private fun AccountActionsCard(
                 icon = Icons.Default.Edit,
                 title = "Edit Profile",
                 subtitle = "Update your information",
-                iconColor = if (glassColors.isDark) Color.White else Color(0xFFE91E8C),
+                iconColor = glassColors.textPrimary,
                 glassColors = glassColors,
                 onClick = onEditProfile
             )
@@ -504,7 +494,7 @@ private fun AccountActionsCard(
                 icon = Icons.AutoMirrored.Filled.Logout,
                 title = "Logout",
                 subtitle = "Sign out of your account",
-                iconColor = Color(0xFFEF4444),
+                iconColor = glassColors.textSecondary,
                 glassColors = glassColors,
                 onClick = onLogout
             )
@@ -570,7 +560,7 @@ private fun DeleteAccountCard(
     hazeState: HazeState,
     glassColors: GlassColors
 ) {
-    val dangerColor = Color(0xFFEF4444)
+    val dangerColor = glassColors.textSecondary
     val cardBackground = if (glassColors.isDark) Color.Black else Color.White
     val cardTint = if (glassColors.isDark) Color(0x30000000) else Color(0x30FFFFFF)
     
@@ -640,7 +630,7 @@ private fun ContactUsCard(
     glassColors: GlassColors,
     onClick: () -> Unit
 ) {
-    val accentColor = if (glassColors.isDark) Color(0xFF60A5FA) else Color(0xFF2563EB)
+    val accentColor = glassColors.textPrimary
     val cardBackground = if (glassColors.isDark) Color.Black else Color.White
     val cardTint = if (glassColors.isDark) Color(0x30000000) else Color(0x30FFFFFF)
     

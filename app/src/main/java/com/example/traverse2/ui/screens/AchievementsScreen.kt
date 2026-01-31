@@ -150,20 +150,7 @@ private fun StatsCard(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(20.dp))
-            .hazeChild(
-                state = hazeState,
-                style = HazeStyle(
-                    backgroundColor = Color(0xFFE91E8C),
-                    blurRadius = 20.dp,
-                    tint = HazeTint(Color(0x40E91E8C)),
-                    noiseFactor = 0.02f
-                )
-            )
-            .background(
-                brush = androidx.compose.ui.graphics.Brush.linearGradient(
-                    colors = listOf(Color(0x80E91E8C), Color(0x80A855F7))
-                )
-            )
+            .background(if (glassColors.isDark) Color.White else Color.Black)
             .padding(24.dp)
     ) {
         Column {
@@ -176,14 +163,14 @@ private fun StatsCard(
                     Text(
                         text = "Progress",
                         fontSize = 14.sp,
-                        color = Color.White.copy(alpha = 0.9f)
+                        color = (if (glassColors.isDark) Color.Black else Color.White).copy(alpha = 0.9f)
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = "$unlockedCount / $totalCount",
                         fontSize = 36.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White
+                        color = if (glassColors.isDark) Color.Black else Color.White
                     )
                 }
                 
@@ -192,14 +179,14 @@ private fun StatsCard(
                     modifier = Modifier
                         .size(80.dp)
                         .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.2f)),
+                        .background((if (glassColors.isDark) Color.Black else Color.White).copy(alpha = 0.2f)),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = "$percentage%",
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White
+                        color = if (glassColors.isDark) Color.Black else Color.White
                     )
                 }
             }
@@ -212,14 +199,14 @@ private fun StatsCard(
                     .fillMaxWidth()
                     .height(6.dp)
                     .clip(RoundedCornerShape(3.dp))
-                    .background(Color.White.copy(alpha = 0.3f))
+                    .background((if (glassColors.isDark) Color.Black else Color.White).copy(alpha = 0.3f))
             ) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth(percentage / 100f)
                         .height(6.dp)
                         .clip(RoundedCornerShape(3.dp))
-                        .background(Color.White)
+                        .background(if (glassColors.isDark) Color.Black else Color.White)
                 )
             }
         }
@@ -238,7 +225,7 @@ private fun AchievementCardDetailed(
 
     val cardBackground = if (glassColors.isDark) Color.Black else Color.White
     val cardTint = if (glassColors.isDark) Color(0x30000000) else Color(0x30FFFFFF)
-    val unlockedColor = Color(0xFF22C55E)
+    val unlockedColor = glassColors.textPrimary
     val lockedColor = glassColors.textSecondary.copy(alpha = 0.4f)
 
     Box(

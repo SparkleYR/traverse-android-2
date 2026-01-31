@@ -1,5 +1,6 @@
 package com.example.traverse2.ui.screens
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -9,11 +10,8 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -23,15 +21,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.traverse2.data.api.FriendItem
 import com.example.traverse2.ui.components.AnimatedGradientBackground
 import com.example.traverse2.ui.components.GlassBottomBar
 import com.example.traverse2.ui.components.NavItem
-import com.example.traverse2.ui.theme.TraverseTheme
 import com.example.traverse2.ui.viewmodel.FriendsViewModel
 import com.example.traverse2.ui.viewmodel.HomeViewModel
 import com.example.traverse2.ui.viewmodel.ProblemsViewModel
@@ -73,6 +68,11 @@ fun MainScreen(
     // Temporary state for passing data to sub-screens
     var streakData by remember { mutableStateOf<StreakData?>(null) }
     var achievementsData by remember { mutableStateOf<List<AchievementData>>(emptyList()) }
+    
+    // Handle system back button - return to main tabs from sub-screens
+    BackHandler(enabled = currentSubScreen != SubScreen.None) {
+        currentSubScreen = SubScreen.None
+    }
     
     AnimatedGradientBackground(
         hazeState = hazeState
@@ -185,16 +185,6 @@ fun MainScreen(
                 }
             }
             
-            // Fading blur overlay for bottom bar area - only show when not in sub-screen
-            AnimatedVisibility(
-                visible = currentSubScreen == SubScreen.None,
-                enter = fadeIn() + slideInVertically { it },
-                exit = fadeOut() + slideOutVertically { it },
-                modifier = Modifier.align(Alignment.BottomCenter)
-            ) {
-                BottomBarBlurOverlay()
-            }
-            
             // Bottom navigation bar - only show when not in sub-screen
             AnimatedVisibility(
                 visible = currentSubScreen == SubScreen.None,
@@ -204,47 +194,9 @@ fun MainScreen(
             ) {
                 GlassBottomBar(
                     selectedItem = selectedNavItem,
-                    onItemSelected = { selectedNavItem = it },
-                    hazeState = hazeState
+                    onItemSelected = { selectedNavItem = it }
                 )
             }
         }
     }
-}
-
-@Composable
-private fun BottomBarBlurOverlay() {
-    val glassColors = TraverseTheme.glassColors
-    
-    // Create a vertical gradient that fades from transparent at top to frosted at bottom
-    val overlayGradient = if (glassColors.isDark) {
-        Brush.verticalGradient(
-            colors = listOf(
-                Color.Transparent,
-                Color.Black.copy(alpha = 0.3f),
-                Color.Black.copy(alpha = 0.6f),
-                Color.Black.copy(alpha = 0.85f)
-            ),
-            startY = 0f,
-            endY = Float.POSITIVE_INFINITY
-        )
-    } else {
-        Brush.verticalGradient(
-            colors = listOf(
-                Color.Transparent,
-                Color.White.copy(alpha = 0.4f),
-                Color.White.copy(alpha = 0.7f),
-                Color.White.copy(alpha = 0.9f)
-            ),
-            startY = 0f,
-            endY = Float.POSITIVE_INFINITY
-        )
-    }
-    
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(140.dp)
-            .background(overlayGradient)
-    )
 }

@@ -102,16 +102,7 @@ fun StreakCalendar(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(24.dp))
-            .hazeChild(
-                state = hazeState,
-                style = HazeStyle(
-                    backgroundColor = cardBackground,
-                    blurRadius = 24.dp,
-                    tint = HazeTint(cardTint),
-                    noiseFactor = 0.02f
-                )
-            )
-            .background(if (glassColors.isDark) Color(0x15FFFFFF) else Color(0x40FFFFFF))
+            .background(if (glassColors.isDark) Color(0xFF1C1C1E) else Color(0xFFF2F2F7))
             .padding(20.dp)
     ) {
         Column {
@@ -125,7 +116,7 @@ fun StreakCalendar(
                     Icon(
                         imageVector = Icons.Default.LocalFireDepartment,
                         contentDescription = "Streak Calendar",
-                        tint = if (glassColors.isDark) Color(0xFFFF6B6B) else Color(0xFFE91E8C),
+                        tint = glassColors.textPrimary,
                         modifier = Modifier.size(22.dp)
                     )
                     Spacer(modifier = Modifier.size(8.dp))
@@ -142,7 +133,7 @@ fun StreakCalendar(
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Medium,
                     color = if (currentStreak > 0) {
-                        if (glassColors.isDark) Color(0xFF22C55E) else Color(0xFF16A34A)
+                        glassColors.textPrimary
                     } else {
                         glassColors.textSecondary
                     }
@@ -200,7 +191,7 @@ fun StreakCalendar(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 LegendItem(
-                    color = if (glassColors.isDark) Color(0xFF22C55E) else Color(0xFF16A34A),
+                    color = glassColors.textPrimary,
                     label = "Active",
                     glassColors = glassColors
                 )
@@ -241,9 +232,9 @@ private fun CalendarDayCell(
         scale.animateTo(1f, tween(300, easing = FastOutSlowInEasing))
     }
 
-    val activeColor = if (glassColors.isDark) Color(0xFF22C55E) else Color(0xFF16A34A)
+    val activeColor = glassColors.textPrimary
     val inactiveColor = if (glassColors.isDark) Color(0x25FFFFFF) else Color(0x15000000)
-    val todayBorderColor = if (glassColors.isDark) Color(0xFF60A5FA) else Color(0xFF3B82F6)
+    val todayBorderColor = glassColors.textPrimary
 
     val bgColor = when {
         day.isActive -> activeColor
@@ -266,7 +257,7 @@ private fun CalendarDayCell(
             .background(
                 if (day.isActive && day.isToday) {
                     Brush.linearGradient(
-                        colors = listOf(activeColor, Color(0xFF10B981))
+                        colors = listOf(activeColor, activeColor)
                     )
                 } else {
                     Brush.linearGradient(colors = listOf(bgColor, bgColor))
