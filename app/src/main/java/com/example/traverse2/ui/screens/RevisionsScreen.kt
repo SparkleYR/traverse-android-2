@@ -1,7 +1,6 @@
 package com.example.traverse2.ui.screens
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -23,13 +22,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.outlined.Circle
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -63,9 +59,6 @@ import com.example.traverse2.ui.theme.TraverseTheme
 import com.example.traverse2.ui.viewmodel.RevisionType
 import com.example.traverse2.ui.viewmodel.RevisionsViewModel
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.HazeStyle
-import dev.chrisbanes.haze.HazeTint
-import dev.chrisbanes.haze.hazeChild
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
@@ -105,40 +98,13 @@ fun RevisionsScreen(
                     .padding(top = 60.dp, bottom = 120.dp)
                     .blur(if (uiState.showPaywall) 8.dp else 0.dp)
             ) {
-        // Header with refresh button
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column {
-                Text(
-                    text = "Revisions",
-                    fontSize = 32.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = glassColors.textPrimary
-                )
-                
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                Text(
-                    text = if (uiState.currentTab == RevisionType.ML)
-                        "ML-powered spaced repetition (LSTM)"
-                    else
-                        "Track your spaced repetition progress",
-                    fontSize = 14.sp,
-                    color = glassColors.textSecondary
-                )
-            }
-            
-            IconButton(onClick = { viewModel.loadRevisions() }) {
-                Icon(
-                    imageVector = Icons.Default.Refresh,
-                    contentDescription = "Refresh",
-                    tint = glassColors.textPrimary
-                )
-            }
-        }
+        // Header
+        Text(
+            text = "Revisions",
+            fontSize = 32.sp,
+            fontWeight = FontWeight.Bold,
+            color = glassColors.textPrimary
+        )
         
         Spacer(modifier = Modifier.height(24.dp))
         
@@ -244,6 +210,7 @@ fun RevisionsScreen(
                         group = group,
                         delayMs = index * 100,
                         isML = uiState.currentTab == RevisionType.ML,
+                        completingRevisionId = uiState.completingRevisionId,
                         onCompleteRevision = { revisionId ->
                             viewModel.completeRevision(revisionId, uiState.currentTab == RevisionType.ML)
                         }
@@ -312,11 +279,17 @@ private fun StatsCard(
     completed: Int,
     isML: Boolean
 ) {
-    val backgroundColor = if (glassColors.isDark) Color(0xFF1C1C1E) else Color(0xFFF2F2F7)
+    // Inverted colors: white in dark mode, dark in light mode
+    val backgroundColor = if (glassColors.isDark) Color.White else Color(0xFF1C1C1E)
     
-    // Text colors for stats - ensure visibility
-    val primaryTextColor = glassColors.textPrimary
-    val secondaryTextColor = glassColors.textSecondary
+    // Text colors inverted for visibility on the inverted background
+    val primaryTextColor = if (glassColors.isDark) Color(0xFF1C1C1E) else Color.White
+    val secondaryTextColor = if (glassColors.isDark) Color(0xFF6E6E73) else Color(0xFFAEAEB2)
+    
+    // Color-coded icon colors
+    val dueTodayColor = Color(0xFF007AFF) // Blue
+    val overdueColor = Color(0xFFFF3B30) // Red
+    val completedColor = Color(0xFF34C759) // Green
     
     Box(
         modifier = Modifier
@@ -344,24 +317,27 @@ private fun StatsCard(
                     icon = Icons.Default.Schedule,
                     value = dueToday.toString(),
                     label = "Due Today",
-                    color = primaryTextColor,
-                    glassColors = glassColors
+                    iconColor = dueTodayColor,
+                    textColor = primaryTextColor,
+                    labelColor = secondaryTextColor
                 )
                 
                 StatItem(
                     icon = Icons.Default.Warning,
                     value = overdue.toString(),
                     label = "Overdue",
-                    color = secondaryTextColor,
-                    glassColors = glassColors
+                    iconColor = overdueColor,
+                    textColor = primaryTextColor,
+                    labelColor = secondaryTextColor
                 )
                 
                 StatItem(
                     icon = Icons.Default.CheckCircle,
                     value = completed.toString(),
                     label = "Done",
-                    color = primaryTextColor,
-                    glassColors = glassColors
+                    iconColor = completedColor,
+                    textColor = primaryTextColor,
+                    labelColor = secondaryTextColor
                 )
             }
         }
@@ -373,8 +349,9 @@ private fun StatItem(
     icon: ImageVector,
     value: String,
     label: String,
-    color: Color,
-    glassColors: GlassColors
+    iconColor: Color,
+    textColor: Color,
+    labelColor: Color
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally
@@ -383,13 +360,13 @@ private fun StatItem(
             modifier = Modifier
                 .size(48.dp)
                 .clip(CircleShape)
-                .background(color.copy(alpha = 0.15f)),
+                .background(iconColor.copy(alpha = 0.15f)),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = label,
-                tint = color,
+                tint = iconColor,
                 modifier = Modifier.size(24.dp)
             )
         }
@@ -400,7 +377,7 @@ private fun StatItem(
             text = value,
             fontSize = 28.sp,
             fontWeight = FontWeight.Bold,
-            color = color
+            color = textColor
         )
         
         Spacer(modifier = Modifier.height(4.dp))
@@ -409,7 +386,7 @@ private fun StatItem(
             text = label,
             fontSize = 13.sp,
             fontWeight = FontWeight.Medium,
-            color = if (glassColors.isDark) Color(0xFFCCCCCC) else glassColors.textSecondary
+            color = labelColor
         )
     }
 }
@@ -421,6 +398,7 @@ private fun DateGroupCard(
     group: RevisionGroup,
     delayMs: Int,
     isML: Boolean,
+    completingRevisionId: Int?,
     onCompleteRevision: (Int) -> Unit
 ) {
     // Parse date and determine display text
@@ -511,7 +489,7 @@ private fun DateGroupCard(
                     revision = revision,
                     glassColors = glassColors,
                     isML = isML,
-                    hazeState = hazeState,
+                    isCompleting = completingRevisionId == revision.id,
                     onComplete = { onCompleteRevision(revision.id) }
                 )
             }
@@ -524,23 +502,9 @@ private fun RevisionListItem(
     revision: RevisionItem,
     glassColors: GlassColors,
     isML: Boolean,
-    hazeState: HazeState,
+    isCompleting: Boolean,
     onComplete: () -> Unit
 ) {
-    var showMenu by remember { mutableStateOf(false) }
-    
-    val menuGlassStyle = HazeStyle(
-        backgroundColor = if (glassColors.isDark) Color.Black else Color.White,
-        blurRadius = if (glassColors.isDark) 30.dp else 25.dp,
-        tint = HazeTint(
-            color = if (glassColors.isDark) 
-                Color.White.copy(alpha = 0.15f) 
-            else 
-                Color.White.copy(alpha = 0.80f)
-        ),
-        noiseFactor = 0.03f
-    )
-    
     val difficultyColor = when (revision.problem.difficulty?.lowercase()) {
         "easy" -> glassColors.textSecondary
         "medium" -> glassColors.textPrimary
@@ -563,17 +527,18 @@ private fun RevisionListItem(
         else -> if (glassColors.isDark) Color(0x18FFFFFF) else Color(0x15000000)
     }
     
-    Box {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(14.dp))
-                .background(bgColor)
-                .clickable(enabled = !isCompleted) { showMenu = true }
-                .padding(14.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+    // Checkbox color based on overdue status
+    val checkboxColor = if (isOverdue) Color(0xFFFF3B30) else glassColors.textPrimary
+    
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(bgColor)
+            .padding(14.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.weight(1f)
@@ -643,60 +608,32 @@ private fun RevisionListItem(
             }
         }
         
-        // Difficulty badge
-        revision.problem.difficulty?.let { difficulty ->
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(difficultyColor.copy(alpha = 0.2f))
-                    .padding(horizontal = 10.dp, vertical = 6.dp)
-            ) {
-                Text(
-                    text = difficulty.capitalize(),
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = difficultyColor
-                )
-            }
-        }
-    }
-        
-        DropdownMenu(
-            expanded = showMenu,
-            onDismissRequest = { showMenu = false },
-            modifier = Modifier
-                .hazeChild(state = hazeState, style = menuGlassStyle)
-                .border(
-                    width = if (glassColors.isDark) 1.dp else 1.5.dp,
-                    color = if (glassColors.isDark)
-                        Color.White.copy(alpha = 0.2f)
-                    else
-                        Color.White.copy(alpha = 0.6f),
-                    shape = RoundedCornerShape(16.dp)
-                ),
-            shape = RoundedCornerShape(16.dp)
-        ) {
-            DropdownMenuItem(
-                text = {
-                    Text(
-                        "Delete",
-                        color = glassColors.textSecondary,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Medium
-                    )
-                },
+        // For normal mode: show checkbox to complete
+        // For ML mode: no action needed (handled by LSTM)
+        if (!isML && !isCompleted) {
+            IconButton(
                 onClick = {
-                    showMenu = false
+                    isCompleting = true
                     onComplete()
                 },
-                leadingIcon = {
+                enabled = !isCompleting,
+                modifier = Modifier.size(32.dp)
+            ) {
+                if (isCompleting) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        color = checkboxColor,
+                        strokeWidth = 2.dp
+                    )
+                } else {
                     Icon(
-                        imageVector = Icons.Default.Delete,
-                        contentDescription = "Delete",
-                        tint = glassColors.textSecondary
+                        imageVector = Icons.Outlined.Circle,
+                        contentDescription = "Mark as complete",
+                        tint = checkboxColor,
+                        modifier = Modifier.size(24.dp)
                     )
                 }
-            )
+            }
         }
     }
 }

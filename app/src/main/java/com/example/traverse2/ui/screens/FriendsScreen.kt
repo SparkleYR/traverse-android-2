@@ -216,6 +216,40 @@ fun FriendsScreen(
             }
         }
         }
+        
+        // Floating Search Button above navbar
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 100.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = "Search",
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium,
+                color = glassColors.textSecondary
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Box(
+                modifier = Modifier
+                    .size(56.dp)
+                    .clip(CircleShape)
+                    .background(
+                        if (glassColors.isDark) Color.White else Color.Black
+                    )
+                    .clickable { showAddFriendDialog = true },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Search,
+                    contentDescription = "Search Friends",
+                    tint = if (glassColors.isDark) Color.Black else Color.White,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+        }
+        }
     }
 
     // Add Friend Dialog
@@ -247,21 +281,14 @@ private fun GlassTabRow(
     onTabSelected: (Int) -> Unit,
     badgeCounts: List<Int>
 ) {
+    val backgroundColor = if (glassColors.isDark) Color(0xFF1C1C1E) else Color(0xFFF2F2F7)
+    
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 20.dp)
             .clip(RoundedCornerShape(16.dp))
-            .hazeChild(
-                state = hazeState,
-                style = HazeStyle(
-                    backgroundColor = if (glassColors.isDark) Color.Black else Color.White,
-                    blurRadius = 20.dp,
-                    tint = HazeTint(if (glassColors.isDark) Color(0x30000000) else Color(0x30FFFFFF)),
-                    noiseFactor = 0.02f
-                )
-            )
-            .background(if (glassColors.isDark) Color(0x15FFFFFF) else Color(0x40FFFFFF))
+            .background(backgroundColor)
     ) {
         TabRow(
             selectedTabIndex = selectedTabIndex,

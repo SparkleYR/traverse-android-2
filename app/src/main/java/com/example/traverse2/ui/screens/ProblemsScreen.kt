@@ -224,37 +224,20 @@ fun ProblemsScreen(
                     
                     // Solved Problems Section
                     if (solves.isNotEmpty()) {
-                        GlassCard(hazeState = hazeState, glassColors = glassColors) {
-                            Column {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(10.dp)
-                                            .clip(CircleShape)
-                                            .background(successColor)
-                                    )
-                                    Spacer(modifier = Modifier.width(10.dp))
-                                    Text(
-                                        text = "Solved Problems",
-                                        fontSize = 18.sp,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = glassColors.textPrimary
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(
-                                        text = "(${solves.size})",
-                                        fontSize = 14.sp,
-                                        color = glassColors.textSecondary
-                                    )
-                                }
-                                
-                                Spacer(modifier = Modifier.height(16.dp))
-                                
-                                solves.forEachIndexed { index, solve ->
-                                    AnimatedSolveItem(solve, glassColors, index * 50)
-                                    if (index < solves.size - 1) {
-                                        Spacer(modifier = Modifier.height(10.dp))
-                                    }
+                        Column {
+                            Text(
+                                text = "Solved Problems",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = glassColors.textPrimary
+                            )
+                            
+                            Spacer(modifier = Modifier.height(16.dp))
+                            
+                            solves.forEachIndexed { index, solve ->
+                                AnimatedSolveItem(solve, glassColors, index * 50)
+                                if (index < solves.size - 1) {
+                                    Spacer(modifier = Modifier.height(10.dp))
                                 }
                             }
                         }

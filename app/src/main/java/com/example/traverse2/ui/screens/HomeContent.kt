@@ -1,5 +1,5 @@
 package com.example.traverse2.ui.screens
-
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -8,8 +8,10 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -34,10 +36,12 @@ import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.PieChart
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Timeline
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -53,6 +57,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -63,9 +68,19 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
+import androidx.compose.runtime.LaunchedEffect
+import com.example.traverse2.data.api.Solve
 import com.example.traverse2.ui.theme.GlassColors
 import com.example.traverse2.ui.theme.TraverseTheme
 import com.example.traverse2.ui.viewmodel.HomeViewModel
+import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
+import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLine
+import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
+import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
+import com.patrykandpatrick.vico.compose.common.fill
+import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartModelProducer
+import com.patrykandpatrick.vico.core.cartesian.data.lineSeries
+import com.patrykandpatrick.vico.core.cartesian.layer.LineCartesianLayer
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.HazeTint
@@ -183,22 +198,8 @@ fun HomeContent(
         )
     }
     
-    // Mock data for cards without backend support
-    val categories = listOf(
-        CategoryData("Arrays", 0),
-        CategoryData("Strings", 0),
-        CategoryData("DP", 0),
-        CategoryData("Trees", 0),
-        CategoryData("Graphs", 0),
-        CategoryData("Math", 0)
-    )
-    val avgSolveTime = "-"
-    val bestTime = "-"
-    val totalTime = "-"
-    val allProblems = emptyList<ProblemItem>()
-    
-    val problemsCompleted = solveStats?.totalSolves ?: 0
-    val totalProblems = 100 // Mock value
+    // Get all solves for charts
+    val allSolves = uiState.allSolves
     
     PullToRefreshBox(
         isRefreshing = uiState.isLoading,
@@ -275,19 +276,35 @@ fun HomeContent(
         
         Spacer(modifier = Modifier.height(20.dp))
         
-        // Problems Summary Card - click to see full details
-        ProblemsSummaryCard(
-            completed = problemsCompleted,
-            total = totalProblems,
-            hazeState = hazeState,
-            glassColors = glassColors,
-            onClick = onNavigateToProblems
-        )
-        
-        Spacer(modifier = Modifier.height(20.dp))
-        
-        if (difficultyData.easy + difficultyData.medium + difficultyData.hard > 0) {
-            DifficultyCard(difficultyData, hazeState, glassColors)
+        // Difficulty (circular) and Achievements side by side
+        if (difficultyData.easy + difficultyData.medium + difficultyData.hard > 0 || achievementsData.isNotEmpty()) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(IntrinsicSize.Max),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                if (difficultyData.easy + difficultyData.medium + difficultyData.hard > 0) {
+                    DifficultyDonutCard(
+                        difficultyData, 
+                        hazeState, 
+                        glassColors,
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                    )
+                }
+                
+                AchievementsCompactCard(
+                    achievements = achievementsData,
+                    hazeState = hazeState,
+                    glassColors = glassColors,
+                    onClick = { onAchievementsDataReady(achievementsData) },
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                )
+            }
             Spacer(modifier = Modifier.height(20.dp))
         }
         
@@ -296,35 +313,28 @@ fun HomeContent(
             Spacer(modifier = Modifier.height(20.dp))
         }
         
-        if (submissionStatsData != null && submissionStatsData.total > 0) {
-            SubmissionStatsCard(submissionStatsData, hazeState, glassColors)
-            Spacer(modifier = Modifier.height(20.dp))
-        }
-        
-        // ProblemDistributionCard - no backend support yet, using mock data
-        ProblemDistributionCard(categories, hazeState, glassColors)
+        // Mistake Analysis Card - using mistake tags from solves
+        MistakeAnalysisCard(allSolves, hazeState, glassColors)
         
         Spacer(modifier = Modifier.height(20.dp))
         
-        // TimePerformanceCard - no backend support yet, using mock data
-        TimePerformanceCard(avgSolveTime, bestTime, totalTime, hazeState, glassColors)
+        // Time Performance Chart Card - using real solve data
+        TimePerformanceChartCard(allSolves, hazeState, glassColors)
+        
+        Spacer(modifier = Modifier.height(20.dp))
+        
+        // Attempts Analysis Chart Card - using real solve data
+        AttemptsAnalysisCard(allSolves, hazeState, glassColors)
         
         Spacer(modifier = Modifier.height(20.dp))
         
         if (recentSolvesData.isNotEmpty()) {
-            RecentSolvesCard(recentSolvesData, hazeState, glassColors)
-            Spacer(modifier = Modifier.height(20.dp))
-        }
-        
-        // Achievements Section - Always show the card
-        if (achievementsData.isNotEmpty()) {
-            AchievementsSection(achievementsData, hazeState, glassColors) {
-                onAchievementsDataReady(achievementsData)
-            }
-        } else {
-            EmptyAchievementsSection(hazeState = hazeState, glassColors = glassColors) {
-                onAchievementsDataReady(emptyList())
-            }
+            RecentSolvesCard(
+                solves = recentSolvesData, 
+                hazeState = hazeState, 
+                glassColors = glassColors,
+                onClick = onNavigateToProblems
+            )
         }
         }
     }
@@ -466,7 +476,12 @@ private fun YourWorkCard(
     GlassCardContainer(hazeState = hazeState, glassColors = glassColors) {
         Column {
             CardHeader(title = "Your Work", icon = Icons.Default.Code, glassColors = glassColors)
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(12.dp))
+            HorizontalDivider(
+                color = glassColors.textSecondary.copy(alpha = 0.2f),
+                thickness = 1.dp
+            )
+            Spacer(modifier = Modifier.height(16.dp))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                 StatColumn(Icons.Default.CheckCircle, totalSolves.toString(), "Total Solves", glassColors)
                 StatColumn(Icons.Default.Star, totalXp.toString(), "Total XP", glassColors)
@@ -483,6 +498,267 @@ private fun StatColumn(icon: ImageVector, value: String, label: String, glassCol
         Spacer(modifier = Modifier.height(8.dp))
         Text(value, fontSize = 28.sp, fontWeight = FontWeight.Bold, color = glassColors.textPrimary)
         Text(label, fontSize = 12.sp, color = glassColors.textSecondary)
+    }
+}
+
+@Composable
+private fun DifficultyDonutCard(
+    data: DifficultyData, 
+    hazeState: HazeState, 
+    glassColors: GlassColors,
+    modifier: Modifier = Modifier
+) {
+    val total = data.easy + data.medium + data.hard
+    
+    val easyColor = Color(0xFFB388FF) // Light purple
+    val mediumColor = Color(0xFFFF80AB) // Pink  
+    val hardColor = Color(0xFF82B1FF) // Light blue
+    
+    val backgroundColor = if (glassColors.isDark) Color(0xFF1C1C1E) else Color(0xFFF2F2F7)
+    
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(24.dp))
+            .background(backgroundColor)
+            .padding(16.dp)
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = "Difficulty",
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = glassColors.textPrimary
+            )
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            HorizontalDivider(
+                color = glassColors.textSecondary.copy(alpha = 0.2f),
+                thickness = 1.dp
+            )
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            // Donut Chart
+            Box(
+                modifier = Modifier.size(100.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Canvas(modifier = Modifier.fillMaxSize()) {
+                    val strokeWidth = 16.dp.toPx()
+                    val radius = (size.minDimension - strokeWidth) / 2
+                    val center = androidx.compose.ui.geometry.Offset(size.width / 2, size.height / 2)
+                    
+                    if (total > 0) {
+                        val easyAngle = (data.easy.toFloat() / total) * 360f
+                        val mediumAngle = (data.medium.toFloat() / total) * 360f
+                        val hardAngle = (data.hard.toFloat() / total) * 360f
+                        
+                        var startAngle = -90f
+                        
+                        // Easy arc
+                        drawArc(
+                            color = easyColor,
+                            startAngle = startAngle,
+                            sweepAngle = easyAngle,
+                            useCenter = false,
+                            style = Stroke(strokeWidth, cap = StrokeCap.Round),
+                            topLeft = androidx.compose.ui.geometry.Offset(
+                                center.x - radius,
+                                center.y - radius
+                            ),
+                            size = androidx.compose.ui.geometry.Size(radius * 2, radius * 2)
+                        )
+                        startAngle += easyAngle
+                        
+                        // Medium arc
+                        drawArc(
+                            color = mediumColor,
+                            startAngle = startAngle,
+                            sweepAngle = mediumAngle,
+                            useCenter = false,
+                            style = Stroke(strokeWidth, cap = StrokeCap.Round),
+                            topLeft = androidx.compose.ui.geometry.Offset(
+                                center.x - radius,
+                                center.y - radius
+                            ),
+                            size = androidx.compose.ui.geometry.Size(radius * 2, radius * 2)
+                        )
+                        startAngle += mediumAngle
+                        
+                        // Hard arc
+                        drawArc(
+                            color = hardColor,
+                            startAngle = startAngle,
+                            sweepAngle = hardAngle,
+                            useCenter = false,
+                            style = Stroke(strokeWidth, cap = StrokeCap.Round),
+                            topLeft = androidx.compose.ui.geometry.Offset(
+                                center.x - radius,
+                                center.y - radius
+                            ),
+                            size = androidx.compose.ui.geometry.Size(radius * 2, radius * 2)
+                        )
+                    } else {
+                        // Empty state
+                        drawArc(
+                            color = glassColors.textSecondary.copy(alpha = 0.2f),
+                            startAngle = 0f,
+                            sweepAngle = 360f,
+                            useCenter = false,
+                            style = Stroke(strokeWidth, cap = StrokeCap.Round),
+                            topLeft = androidx.compose.ui.geometry.Offset(
+                                center.x - radius,
+                                center.y - radius
+                            ),
+                            size = androidx.compose.ui.geometry.Size(radius * 2, radius * 2)
+                        )
+                    }
+                }
+                
+                // Center text
+                Text(
+                    text = "$total",
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = glassColors.textPrimary
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            // Legend
+            Column(
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                LegendItem("Easy", data.easy, easyColor, glassColors)
+                LegendItem("Medium", data.medium, mediumColor, glassColors)
+                LegendItem("Hard", data.hard, hardColor, glassColors)
+            }
+        }
+    }
+}
+
+@Composable
+private fun LegendItem(label: String, count: Int, color: Color, glassColors: GlassColors) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(8.dp)
+                .clip(CircleShape)
+                .background(color)
+        )
+        Text(
+            text = label,
+            fontSize = 11.sp,
+            color = glassColors.textSecondary
+        )
+        Spacer(modifier = Modifier.weight(1f))
+        Text(
+            text = "$count",
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold,
+            color = glassColors.textPrimary
+        )
+    }
+}
+
+@Composable
+private fun AchievementsCompactCard(
+    achievements: List<AchievementData>,
+    hazeState: HazeState,
+    glassColors: GlassColors,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val unlockedCount = achievements.count { it.unlocked }
+    val totalCount = achievements.size.coerceAtLeast(1)
+    val percentage = if (totalCount > 0) (unlockedCount.toFloat() / totalCount.toFloat()) else 0f
+    
+    val backgroundColor = if (glassColors.isDark) Color(0xFF1C1C1E) else Color(0xFFF2F2F7)
+    
+    // Yellow/gold glow that increases with more achievements
+    val glowColor = Color(0xFFFFD700) // Gold
+    val glowIntensity = percentage.coerceIn(0f, 1f)
+    
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(24.dp))
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        backgroundColor,
+                        backgroundColor,
+                        if (glowIntensity > 0) glowColor.copy(alpha = glowIntensity * 0.4f) else backgroundColor
+                    ),
+                    startY = 0f,
+                    endY = Float.POSITIVE_INFINITY
+                )
+            )
+            .clickable { onClick() }
+            .padding(16.dp)
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.SpaceBetween,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(
+                text = "Achievements",
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = glassColors.textPrimary
+            )
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            HorizontalDivider(
+                color = glassColors.textSecondary.copy(alpha = 0.2f),
+                thickness = 1.dp
+            )
+            
+            // Centered number - takes up most of the space
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "$unlockedCount",
+                    fontSize = 72.sp,
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = FontFamily.Serif,
+                    color = if (glowIntensity > 0.5f) 
+                        Color(0xFFFFD700) 
+                    else 
+                        glassColors.textPrimary,
+                    letterSpacing = (-4).sp
+                )
+            }
+            
+            // Bottom text
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "of $totalCount",
+                    fontSize = 14.sp,
+                    color = glassColors.textSecondary
+                )
+                
+                Text(
+                    text = "unlocked",
+                    fontSize = 12.sp,
+                    color = glassColors.textSecondary.copy(alpha = 0.7f)
+                )
+            }
+        }
     }
 }
 
@@ -574,7 +850,12 @@ private fun PlatformsCard(platforms: List<PlatformData>, hazeState: HazeState, g
     GlassCardContainer(hazeState = hazeState, glassColors = glassColors) {
         Column {
             CardHeader(title = "Platforms", icon = Icons.Default.Category, glassColors = glassColors)
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(12.dp))
+            HorizontalDivider(
+                color = glassColors.textSecondary.copy(alpha = 0.2f),
+                thickness = 1.dp
+            )
+            Spacer(modifier = Modifier.height(16.dp))
             
             platforms.forEach { platform ->
                 PlatformRow(platform, total, glassColors)
@@ -626,7 +907,12 @@ private fun SubmissionStatsCard(stats: SubmissionStats, hazeState: HazeState, gl
     GlassCardContainer(hazeState = hazeState, glassColors = glassColors) {
         Column {
             CardHeader(title = "Submission Statistics", icon = Icons.Default.Timeline, glassColors = glassColors)
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(12.dp))
+            HorizontalDivider(
+                color = glassColors.textSecondary.copy(alpha = 0.2f),
+                thickness = 1.dp
+            )
+            Spacer(modifier = Modifier.height(16.dp))
             
             Row(
                 modifier = Modifier
@@ -672,6 +958,152 @@ private fun SubmissionStatsCard(stats: SubmissionStats, hazeState: HazeState, gl
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun MistakeAnalysisCard(solves: List<Solve>, hazeState: HazeState, glassColors: GlassColors) {
+    // Collect all mistake tags from solves
+    val mistakeTags = solves.flatMap { solve ->
+        solve.submission?.mistakeTags ?: emptyList()
+    }.groupingBy { it }.eachCount()
+        .toList()
+        .sortedByDescending { it.second }
+        .take(6)
+    
+    val totalMistakes = mistakeTags.sumOf { it.second }
+    val maxCount = mistakeTags.maxOfOrNull { it.second } ?: 1
+    
+    // Monochrome color for tags
+    val tagColor = glassColors.textPrimary
+    
+    GlassCardContainer(hazeState = hazeState, glassColors = glassColors) {
+        Column {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.Category,
+                    contentDescription = "Mistake Analysis",
+                    tint = glassColors.textPrimary,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Mistake Analysis",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = glassColors.textPrimary
+                )
+                Spacer(modifier = Modifier.weight(1f))
+                Text(
+                    text = "$totalMistakes",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = glassColors.textSecondary
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            HorizontalDivider(
+                color = glassColors.textSecondary.copy(alpha = 0.2f),
+                thickness = 1.dp
+            )
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            if (mistakeTags.isNotEmpty()) {
+                // Tags as chips
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    itemsIndexed(mistakeTags) { index, (tag, count) ->
+                        MistakeTagChip(tag, count, tagColor, glassColors)
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                // Bar chart for top mistakes
+                GlassSubsection(glassColors = glassColors) {
+                    Column {
+                        mistakeTags.take(4).forEachIndexed { index, (tag, count) ->
+                            MistakeBar(tag, count, maxCount, tagColor, glassColors)
+                            if (index < minOf(3, mistakeTags.size - 1)) Spacer(modifier = Modifier.height(10.dp))
+                        }
+                    }
+                }
+            } else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(80.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "No mistakes tracked yet",
+                        color = glassColors.textSecondary,
+                        fontSize = 14.sp
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MistakeTagChip(tag: String, count: Int, color: Color, glassColors: GlassColors) {
+    // Dark mode: white bg, black text | Light mode: black bg, white text
+    val bgColor = if (glassColors.isDark) Color.White else Color.Black
+    val textColor = if (glassColors.isDark) Color.Black else Color.White
+    
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(20.dp))
+            .background(bgColor)
+            .padding(horizontal = 12.dp, vertical = 6.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(tag, fontSize = 12.sp, fontWeight = FontWeight.Medium, color = textColor)
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(count.toString(), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = textColor)
+        }
+    }
+}
+
+@Composable
+private fun MistakeBar(tag: String, count: Int, maxCount: Int, color: Color, glassColors: GlassColors) {
+    val progress = if (maxCount > 0) count.toFloat() / maxCount else 0f
+    
+    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            text = tag,
+            fontSize = 12.sp,
+            color = glassColors.textSecondary,
+            modifier = Modifier.width(80.dp),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .height(8.dp)
+                .clip(RoundedCornerShape(4.dp))
+                .background(glassColors.textSecondary.copy(alpha = 0.15f))
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(progress)
+                    .height(8.dp)
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(color)
+            )
+        }
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = count.toString(),
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold,
+            color = glassColors.textPrimary,
+            modifier = Modifier.width(24.dp)
+        )
     }
 }
 
@@ -754,53 +1186,346 @@ private fun CategoryBar(category: CategoryData, maxCount: Int, color: Color, gla
     }
 }
 
+// Helper function to format time in seconds to readable string
+private fun formatTime(seconds: Int): String {
+    val hours = seconds / 3600
+    val minutes = (seconds % 3600) / 60
+    val secs = seconds % 60
+    
+    return when {
+        hours > 0 -> "${hours}h ${minutes}m"
+        minutes > 0 -> "${minutes}m ${secs}s"
+        else -> "${secs}s"
+    }
+}
+
 @Composable
-private fun TimePerformanceCard(avgTime: String, bestTime: String, totalTime: String, hazeState: HazeState, glassColors: GlassColors) {
+private fun TimePerformanceChartCard(solves: List<Solve>, hazeState: HazeState, glassColors: GlassColors) {
+    // Filter solves with time data
+    val timeData = solves.mapNotNull { solve ->
+        solve.submission?.timeTaken?.let { time ->
+            Pair(solve.problem.title ?: solve.problem.slug, time)
+        }
+    }.reversed().takeLast(15) // Take last 15 for chart
+    
+    val avgTime = if (timeData.isNotEmpty()) timeData.map { it.second }.average().toInt() else 0
+    val fastestTime = timeData.minOfOrNull { it.second } ?: 0
+    
+    // Monochrome colors
+    val chartColor = glassColors.textPrimary
+    val chartColorEnd = glassColors.textSecondary
+    
     GlassCardContainer(hazeState = hazeState, glassColors = glassColors) {
         Column {
-            CardHeader(title = "Time Performance", icon = Icons.Default.Speed, glassColors = glassColors)
-            Spacer(modifier = Modifier.height(20.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.AccessTime,
+                    contentDescription = "Time Performance",
+                    tint = glassColors.textPrimary,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Time Performance",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = glassColors.textPrimary
+                )
+            }
             
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                FixedTimeStatBox(Icons.Default.AccessTime, avgTime, "Avg Solve", glassColors, null, Modifier.weight(1f))
-                FixedTimeStatBox(Icons.Default.Speed, bestTime, "Best Time", glassColors, glassColors.textPrimary, Modifier.weight(1f))
-                FixedTimeStatBox(Icons.Default.History, totalTime, "Total Time", glassColors, null, Modifier.weight(1f))
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            HorizontalDivider(
+                color = glassColors.textSecondary.copy(alpha = 0.2f),
+                thickness = 1.dp
+            )
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            if (timeData.isNotEmpty()) {
+                // Stats Row
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column {
+                        Text(
+                            text = formatTime(avgTime),
+                            fontSize = 36.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = chartColor
+                        )
+                        Text(
+                            text = "Average Time",
+                            fontSize = 13.sp,
+                            color = glassColors.textSecondary
+                        )
+                    }
+                    
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text(
+                            text = formatTime(fastestTime),
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = chartColorEnd
+                        )
+                        Text(
+                            text = "Fastest",
+                            fontSize = 13.sp,
+                            color = glassColors.textSecondary
+                        )
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(20.dp))
+                
+                // Vico Line Chart
+                val modelProducer = remember { CartesianChartModelProducer() }
+                
+                LaunchedEffect(timeData) {
+                    modelProducer.runTransaction {
+                        lineSeries { series(timeData.map { it.second }) }
+                    }
+                }
+                
+                CartesianChartHost(
+                    chart = rememberCartesianChart(
+                        rememberLineCartesianLayer(
+                            lineProvider = LineCartesianLayer.LineProvider.series(
+                                LineCartesianLayer.rememberLine(
+                                    fill = LineCartesianLayer.LineFill.single(fill(chartColor)),
+                                    areaFill = LineCartesianLayer.AreaFill.single(
+                                        fill(chartColor.copy(alpha = 0.3f))
+                                    )
+                                )
+                            )
+                        )
+                    ),
+                    modelProducer = modelProducer,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(120.dp)
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(120.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "No time data available",
+                        color = glassColors.textSecondary,
+                        fontSize = 14.sp
+                    )
+                }
             }
         }
     }
 }
 
 @Composable
-private fun FixedTimeStatBox(icon: ImageVector, value: String, label: String, glassColors: GlassColors, accentColor: Color?, modifier: Modifier) {
-    val subsectionBg = if (glassColors.isDark) Color(0x20FFFFFF) else Color(0x30FFFFFF)
-    val borderColor = if (glassColors.isDark) Color(0x15FFFFFF) else Color(0x20000000)
+private fun AttemptsAnalysisCard(solves: List<Solve>, hazeState: HazeState, glassColors: GlassColors) {
+    // Filter solves with tries data
+    val triesData = solves.mapNotNull { solve ->
+        solve.submission?.numberOfTries?.let { tries ->
+            if (tries > 0) Triple(solve.problem.title ?: solve.problem.slug, tries, solve.problem.difficulty ?: "unknown")
+            else null
+        }
+    }.reversed().takeLast(20)
     
-    Box(
-        modifier = modifier
-            .height(100.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .background(subsectionBg)
-            .border(1.dp, borderColor, RoundedCornerShape(16.dp)),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-            modifier = Modifier.padding(12.dp)
-        ) {
-            Icon(icon, label, tint = accentColor ?: glassColors.textPrimary, modifier = Modifier.size(22.dp))
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(value, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = accentColor ?: glassColors.textPrimary, textAlign = TextAlign.Center)
-            Text(label, fontSize = 10.sp, color = glassColors.textSecondary, textAlign = TextAlign.Center)
+    val avgTries = if (triesData.isNotEmpty()) triesData.map { it.second.toDouble() }.average() else 0.0
+    val firstTryCount = triesData.count { it.second == 1 }
+    
+    // Colors for difficulty
+    val easyColor = Color(0xFFB388FF) // Light purple
+    val mediumColor = Color(0xFFFF80AB) // Pink
+    val hardColor = Color(0xFF82B1FF) // Light blue
+    val accentColor = Color(0xFFB388FF)
+    
+    GlassCardContainer(hazeState = hazeState, glassColors = glassColors) {
+        Column {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.Refresh,
+                    contentDescription = "Attempts Analysis",
+                    tint = accentColor,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Attempts Analysis",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = glassColors.textPrimary
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            HorizontalDivider(
+                color = glassColors.textSecondary.copy(alpha = 0.2f),
+                thickness = 1.dp
+            )
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            if (triesData.isNotEmpty()) {
+                // Stats Row
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column {
+                        Text(
+                            text = String.format("%.1f", avgTries),
+                            fontSize = 36.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = accentColor
+                        )
+                        Text(
+                            text = "Average Tries",
+                            fontSize = 13.sp,
+                            color = glassColors.textSecondary
+                        )
+                    }
+                    
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text(
+                            text = "$firstTryCount",
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = easyColor
+                        )
+                        Text(
+                            text = "First Try",
+                            fontSize = 13.sp,
+                            color = glassColors.textSecondary
+                        )
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(20.dp))
+                
+                // Scatter-like Point Chart using Canvas (Vico doesn't have native scatter)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(100.dp)
+                ) {
+                    Canvas(modifier = Modifier.fillMaxSize()) {
+                        val maxTries = triesData.maxOfOrNull { it.second } ?: 1
+                        val pointSpacing = size.width / (triesData.size + 1)
+                        
+                        triesData.forEachIndexed { index, (_, tries, difficulty) ->
+                            val x = pointSpacing * (index + 1)
+                            val y = size.height - (tries.toFloat() / maxTries.toFloat() * size.height * 0.8f) - size.height * 0.1f
+                            
+                            val color = when (difficulty.lowercase()) {
+                                "easy" -> easyColor
+                                "medium" -> mediumColor
+                                "hard" -> hardColor
+                                else -> Color.Gray
+                            }
+                            
+                            val radius = if (tries == 1) 8.dp.toPx() else 5.dp.toPx()
+                            
+                            drawCircle(
+                                color = color,
+                                radius = radius,
+                                center = androidx.compose.ui.geometry.Offset(x, y)
+                            )
+                        }
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(12.dp))
+                
+                // Legend
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .clip(CircleShape)
+                                .background(easyColor)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Easy", fontSize = 11.sp, color = glassColors.textSecondary)
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .clip(CircleShape)
+                                .background(mediumColor)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Medium", fontSize = 11.sp, color = glassColors.textSecondary)
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .clip(CircleShape)
+                                .background(hardColor)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Hard", fontSize = 11.sp, color = glassColors.textSecondary)
+                    }
+                }
+            } else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(100.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "No attempts data available",
+                        color = glassColors.textSecondary,
+                        fontSize = 14.sp
+                    )
+                }
+            }
         }
     }
 }
 
 @Composable
-private fun RecentSolvesCard(solves: List<RecentSolve>, hazeState: HazeState, glassColors: GlassColors) {
-    GlassCardContainer(hazeState = hazeState, glassColors = glassColors) {
+private fun RecentSolvesCard(
+    solves: List<RecentSolve>, 
+    hazeState: HazeState, 
+    glassColors: GlassColors,
+    onClick: () -> Unit = {}
+) {
+    GlassCardContainer(
+        hazeState = hazeState, 
+        glassColors = glassColors,
+        modifier = Modifier.clickable { onClick() }
+    ) {
         Column {
-            CardHeader(title = "Recent Solves", icon = Icons.Default.History, glassColors = glassColors)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                CardHeader(title = "Recent Solves", icon = Icons.Default.History, glassColors = glassColors)
+                Icon(
+                    imageVector = Icons.Default.Code,
+                    contentDescription = "View All",
+                    tint = glassColors.textSecondary,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            HorizontalDivider(
+                color = glassColors.textSecondary.copy(alpha = 0.2f),
+                thickness = 1.dp
+            )
             Spacer(modifier = Modifier.height(16.dp))
             
             solves.forEachIndexed { index, solve ->
@@ -1070,31 +1795,18 @@ private fun ProblemsSummaryCard(
     glassColors: GlassColors,
     onClick: () -> Unit
 ) {
-    val percentage = if (total > 0) (completed.toFloat() / total * 100).toInt() else 0
     val remaining = total - completed
     
-    val progressColor = if (glassColors.isDark) Color.White else Color(0xFFE91E8C)
-    val trackColor = if (glassColors.isDark) Color(0x30FFFFFF) else Color(0x30E91E8C)
-    val successColor = Color(0xFF22C55E)
-    val warningColor = Color(0xFFFBBF24)
-    
-    val cardBackground = if (glassColors.isDark) Color.Black else Color.White
-    val cardTint = if (glassColors.isDark) Color(0x30000000) else Color(0x30FFFFFF)
+    // Dark mode: white bg, black text | Light mode: black bg, white text
+    val cardBg = if (glassColors.isDark) Color.White else Color.Black
+    val textColor = if (glassColors.isDark) Color.Black else Color.White
+    val secondaryTextColor = if (glassColors.isDark) Color.Black.copy(alpha = 0.7f) else Color.White.copy(alpha = 0.7f)
     
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(24.dp))
-            .hazeChild(
-                state = hazeState,
-                style = HazeStyle(
-                    backgroundColor = cardBackground,
-                    blurRadius = 24.dp,
-                    tint = HazeTint(cardTint),
-                    noiseFactor = 0.02f
-                )
-            )
-            .background(if (glassColors.isDark) Color(0x15FFFFFF) else Color(0x40FFFFFF))
+            .background(cardBg)
             .clickable(onClick = onClick)
             .padding(20.dp)
     ) {
@@ -1103,65 +1815,35 @@ private fun ProblemsSummaryCard(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                // Circular progress indicator
-                val progress = if (total > 0) completed.toFloat() / total else 0f
-                
-                Box(
-                    modifier = Modifier.size(60.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Canvas(modifier = Modifier.fillMaxSize()) {
-                        drawArc(trackColor, -90f, 360f, false, style = Stroke(8.dp.toPx(), cap = StrokeCap.Round))
-                        drawArc(progressColor, -90f, 360f * progress, false, style = Stroke(8.dp.toPx(), cap = StrokeCap.Round))
-                    }
-                    Text(
-                        text = "$percentage%",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = glassColors.textPrimary
+            Column {
+                Text(
+                    text = "Problems",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = textColor
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.CheckCircle,
+                        contentDescription = "Solved",
+                        tint = textColor,
+                        modifier = Modifier.size(14.dp)
                     )
-                }
-                
-                Spacer(modifier = Modifier.width(16.dp))
-                
-                Column {
+                    Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = "Problems",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = glassColors.textPrimary
+                        text = "$completed solved",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = textColor
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.CheckCircle,
-                            contentDescription = "Solved",
-                            tint = successColor,
-                            modifier = Modifier.size(14.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = "$completed",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = successColor
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = "Remaining",
-                            tint = warningColor,
-                            modifier = Modifier.size(14.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = "$remaining",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = warningColor
-                        )
-                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = "$remaining remaining",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = secondaryTextColor
+                    )
                 }
             }
             
@@ -1169,7 +1851,7 @@ private fun ProblemsSummaryCard(
             Icon(
                 imageVector = Icons.Default.Code,
                 contentDescription = "View Problems",
-                tint = glassColors.textSecondary,
+                tint = secondaryTextColor,
                 modifier = Modifier.size(24.dp)
             )
         }
