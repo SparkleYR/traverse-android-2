@@ -34,6 +34,7 @@ import com.example.traverse2.ui.components.NavItem
 import com.example.traverse2.ui.theme.TraverseTheme
 import com.example.traverse2.ui.viewmodel.FriendsViewModel
 import com.example.traverse2.ui.viewmodel.HomeViewModel
+import com.example.traverse2.ui.viewmodel.ProblemsViewModel
 import com.example.traverse2.ui.viewmodel.RevisionsViewModel
 import dev.chrisbanes.haze.HazeState
 
@@ -65,6 +66,9 @@ fun MainScreen(
     
     // Shared RevisionsViewModel to prevent recreation on tab switches
     val revisionsViewModel: RevisionsViewModel = viewModel()
+    
+    // Shared ProblemsViewModel to prevent recreation on navigation
+    val problemsViewModel: ProblemsViewModel = viewModel()
 
     // Temporary state for passing data to sub-screens
     var streakData by remember { mutableStateOf<StreakData?>(null) }
@@ -89,7 +93,8 @@ fun MainScreen(
                 when (subScreen) {
                     SubScreen.Problems -> ProblemsScreen(
                         hazeState = hazeState,
-                        onBack = { currentSubScreen = SubScreen.None }
+                        onBack = { currentSubScreen = SubScreen.None },
+                        viewModel = problemsViewModel
                     )
                     SubScreen.Streak -> {
                         if (streakData != null) {

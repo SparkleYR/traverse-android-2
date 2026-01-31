@@ -199,8 +199,28 @@ data class SolvesResponse(
 data class Solve(
     val id: Int,
     val problem: Problem,
+    val submission: SolveSubmission? = null,
+    val highlight: SolveHighlight? = null,
     val xpAwarded: Int,
     val solvedAt: String
+)
+
+@kotlinx.serialization.Serializable
+data class SolveSubmission(
+    val language: String? = null,
+    val happenedAt: String? = null,
+    val aiAnalysis: String? = null,
+    val mistakeTags: List<String> = emptyList(),
+    val numberOfTries: Int? = null,
+    val timeTaken: Int? = null
+)
+
+@kotlinx.serialization.Serializable
+data class SolveHighlight(
+    val id: Int,
+    val content: String,
+    val note: String? = null,
+    val tags: List<String> = emptyList()
 )
 
 @kotlinx.serialization.Serializable
@@ -210,6 +230,7 @@ data class Problem(
     val slug: String,
     val title: String? = null,
     val difficulty: String? = null,
+    val category: Int? = null,
     val url: String? = null
 )
 
