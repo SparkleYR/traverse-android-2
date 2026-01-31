@@ -39,7 +39,7 @@ data class GlassColors(
 
 // Theme state object for toggling dark mode
 object ThemeState {
-    var isDarkMode by mutableStateOf(false)
+    var isDarkMode by mutableStateOf(true) // Default to dark mode
     
     fun toggleTheme() {
         isDarkMode = !isDarkMode

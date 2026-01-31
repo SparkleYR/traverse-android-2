@@ -150,37 +150,6 @@ fun ProblemsScreen(
                             horizontalArrangement = Arrangement.SpaceEvenly,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            val progress = remember { Animatable(0f) }
-                            LaunchedEffect(problemsCompleted, totalProblems) {
-                                progress.animateTo(
-                                    if (totalProblems > 0) problemsCompleted.toFloat() / totalProblems else 0f,
-                                    tween(1200, easing = FastOutSlowInEasing)
-                                )
-                            }
-                            
-                            Box(
-                                modifier = Modifier.size(100.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Canvas(modifier = Modifier.fillMaxSize()) {
-                                    drawArc(trackColor, -90f, 360f, false, style = Stroke(12.dp.toPx(), cap = StrokeCap.Round))
-                                    drawArc(progressColor, -90f, 360f * progress.value, false, style = Stroke(12.dp.toPx(), cap = StrokeCap.Round))
-                                }
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Text(
-                                        text = "$percentage%",
-                                        fontSize = 24.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = glassColors.textPrimary
-                                    )
-                                    Text(
-                                        text = "Complete",
-                                        fontSize = 11.sp,
-                                        color = glassColors.textSecondary
-                                    )
-                                }
-                            }
-                            
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Icon(
@@ -199,6 +168,20 @@ fun ProblemsScreen(
                                 }
                                 Text(
                                     text = "Solved",
+                                    fontSize = 13.sp,
+                                    color = glassColors.textSecondary
+                                )
+                            }
+                            
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(
+                                    text = "$percentage%",
+                                    fontSize = 32.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = glassColors.textPrimary
+                                )
+                                Text(
+                                    text = "Complete",
                                     fontSize = 13.sp,
                                     color = glassColors.textSecondary
                                 )

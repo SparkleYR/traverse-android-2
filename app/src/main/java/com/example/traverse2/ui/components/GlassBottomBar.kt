@@ -71,13 +71,13 @@ fun GlassBottomBar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(48.dp)
-                .clip(RoundedCornerShape(24.dp))
+                .height(56.dp)
+                .clip(RoundedCornerShape(28.dp))
                 .background(backgroundColor)
                 .border(
                     width = 1.dp,
                     color = borderColor,
-                    shape = RoundedCornerShape(24.dp)
+                    shape = RoundedCornerShape(28.dp)
                 )
                 .padding(horizontal = 8.dp),
             horizontalArrangement = Arrangement.SpaceEvenly,

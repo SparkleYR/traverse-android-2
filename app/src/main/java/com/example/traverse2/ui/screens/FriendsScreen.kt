@@ -117,39 +117,20 @@ fun FriendsScreen(
                 color = glassColors.textPrimary
             )
 
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                // Request badge
-                val totalRequests = uiState.receivedRequests.size + uiState.receivedStreakRequests.size
-                if (totalRequests > 0) {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(glassColors.textSecondary.copy(alpha = 0.2f))
-                            .padding(horizontal = 10.dp, vertical = 4.dp)
-                    ) {
-                        Text(
-                            text = "$totalRequests pending",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = glassColors.textSecondary
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
-                }
-
-                // Add friend button
-                IconButton(
-                    onClick = { showAddFriendDialog = true },
+            // Request badge only
+            val totalRequests = uiState.receivedRequests.size + uiState.receivedStreakRequests.size
+            if (totalRequests > 0) {
+                Box(
                     modifier = Modifier
-                        .size(36.dp)
-                        .clip(CircleShape)
-                        .background(if (glassColors.isDark) Color(0x20FFFFFF) else Color(0x20000000))
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color(0xFFEF4444).copy(alpha = 0.2f))
+                        .padding(horizontal = 10.dp, vertical = 4.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.PersonAdd,
-                        contentDescription = "Add Friend",
-                        tint = glassColors.textPrimary,
-                        modifier = Modifier.size(20.dp)
+                    Text(
+                        text = "$totalRequests pending",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color(0xFFEF4444)
                     )
                 }
             }
@@ -248,7 +229,6 @@ fun FriendsScreen(
                     modifier = Modifier.size(24.dp)
                 )
             }
-        }
         }
     }
 

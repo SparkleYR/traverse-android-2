@@ -27,10 +27,12 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.AccessTime
+import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Code
+import androidx.compose.material.icons.filled.Diamond
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.LocalFireDepartment
@@ -39,6 +41,7 @@ import androidx.compose.material.icons.filled.PieChart
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.TaskAlt
 import androidx.compose.material.icons.filled.Timeline
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
@@ -90,6 +93,7 @@ import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 import java.time.LocalDate
 import com.example.traverse2.ui.components.StreakDay
+import com.example.traverse2.data.api.FriendItem
 
 data class DifficultyData(val easy: Int, val medium: Int, val hard: Int)
 data class PlatformData(val name: String, val count: Int, val color: Color)
@@ -98,7 +102,15 @@ data class CategoryData(val name: String, val count: Int)
 data class RecentSolve(val problemName: String, val platform: String, val difficulty: String, val timeAgo: String)
 data class AchievementData(val name: String, val description: String, val icon: String?, val category: String, val unlocked: Boolean)
 data class ProblemItem(val name: String, val platform: String, val difficulty: String, val solved: Boolean)
-data class StreakData(val currentStreak: Int, val longestStreak: Int, val totalActiveDays: Int, val averagePerWeek: Float, val streakDays: List<StreakDay> = emptyList())
+data class StreakData(
+    val currentStreak: Int, 
+    val longestStreak: Int, 
+    val totalActiveDays: Int, 
+    val averagePerWeek: Float, 
+    val streakDays: List<StreakDay> = emptyList(),
+    val bestFriendName: String? = null,
+    val bestFriendStreak: Int = 0
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -110,6 +122,7 @@ fun HomeContent(
     onNavigateToAchievements: () -> Unit = {},
     onStreakDataReady: (StreakData) -> Unit = {},
     onAchievementsDataReady: (List<AchievementData>) -> Unit = {},
+    friends: List<FriendItem> = emptyList(),
     viewModel: HomeViewModel = viewModel()
 ) {
     val glassColors = TraverseTheme.glassColors
@@ -252,13 +265,17 @@ fun HomeContent(
                             isToday = daysAgo == 0
                         )
                     }
+                    // Find best friend (highest streak)
+                    val bestFriend = friends.maxByOrNull { it.currentStreak }
                     onStreakDataReady(
                         StreakData(
                             currentStreak = user.currentStreak,
                             longestStreak = user.longestStreak,
                             totalActiveDays = solveStats?.totalStreakDays ?: 0,
                             averagePerWeek = if (solveStats != null) solveStats.totalSolves / 4f else 0f,
-                            streakDays = streakDays
+                            streakDays = streakDays,
+                            bestFriendName = bestFriend?.username,
+                            bestFriendStreak = bestFriend?.currentStreak ?: 0
                         )
                     )
                 }
@@ -308,6 +325,16 @@ fun HomeContent(
             Spacer(modifier = Modifier.height(20.dp))
         }
         
+        if (recentSolvesData.isNotEmpty()) {
+            RecentSolvesCard(
+                solves = recentSolvesData, 
+                hazeState = hazeState, 
+                glassColors = glassColors,
+                onClick = onNavigateToProblems
+            )
+            Spacer(modifier = Modifier.height(20.dp))
+        }
+        
         if (platforms.isNotEmpty()) {
             PlatformsCard(platforms, hazeState, glassColors)
             Spacer(modifier = Modifier.height(20.dp))
@@ -323,19 +350,13 @@ fun HomeContent(
         
         Spacer(modifier = Modifier.height(20.dp))
         
-        // Attempts Analysis Chart Card - using real solve data
-        AttemptsAnalysisCard(allSolves, hazeState, glassColors)
+        // Solving Hours Chart Card - using real solve data
+        SolvingHoursCard(allSolves, hazeState, glassColors)
         
         Spacer(modifier = Modifier.height(20.dp))
         
-        if (recentSolvesData.isNotEmpty()) {
-            RecentSolvesCard(
-                solves = recentSolvesData, 
-                hazeState = hazeState, 
-                glassColors = glassColors,
-                onClick = onNavigateToProblems
-            )
-        }
+        // Attempts Analysis Chart Card - using real solve data
+        AttemptsAnalysisCard(allSolves, hazeState, glassColors)
         }
     }
 }
@@ -482,22 +503,47 @@ private fun YourWorkCard(
                 thickness = 1.dp
             )
             Spacer(modifier = Modifier.height(16.dp))
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                StatColumn(Icons.Default.CheckCircle, totalSolves.toString(), "Total Solves", glassColors)
-                StatColumn(Icons.Default.Star, totalXp.toString(), "Total XP", glassColors)
-                StatColumn(Icons.Default.LocalFireDepartment, streak.toString(), "Streak", glassColors)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                StatColumn(Icons.Default.TaskAlt, totalSolves.toString(), "Solves", glassColors, Modifier.weight(1f))
+                
+                Box(
+                    modifier = Modifier
+                        .width(1.dp)
+                        .height(70.dp)
+                        .background(glassColors.textSecondary.copy(alpha = 0.2f))
+                )
+                
+                StatColumn(Icons.Default.Diamond, totalXp.toString(), "XP", glassColors, Modifier.weight(1f))
+                
+                Box(
+                    modifier = Modifier
+                        .width(1.dp)
+                        .height(70.dp)
+                        .background(glassColors.textSecondary.copy(alpha = 0.2f))
+                )
+                
+                StatColumn(Icons.Default.Bolt, streak.toString(), "Streak", glassColors, Modifier.weight(1f))
             }
         }
     }
 }
 
 @Composable
-private fun StatColumn(icon: ImageVector, value: String, label: String, glassColors: GlassColors) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Icon(icon, label, tint = glassColors.textSecondary, modifier = Modifier.size(24.dp))
-        Spacer(modifier = Modifier.height(8.dp))
+private fun StatColumn(icon: ImageVector, value: String, label: String, glassColors: GlassColors, modifier: Modifier = Modifier) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+        modifier = modifier
+    ) {
         Text(value, fontSize = 28.sp, fontWeight = FontWeight.Bold, color = glassColors.textPrimary)
+        Spacer(modifier = Modifier.height(4.dp))
         Text(label, fontSize = 12.sp, color = glassColors.textSecondary)
+        Spacer(modifier = Modifier.height(8.dp))
+        Icon(icon, label, tint = glassColors.textSecondary, modifier = Modifier.size(20.dp))
     }
 }
 
@@ -1022,12 +1068,10 @@ private fun MistakeAnalysisCard(solves: List<Solve>, hazeState: HazeState, glass
                 Spacer(modifier = Modifier.height(16.dp))
                 
                 // Bar chart for top mistakes
-                GlassSubsection(glassColors = glassColors) {
-                    Column {
-                        mistakeTags.take(4).forEachIndexed { index, (tag, count) ->
-                            MistakeBar(tag, count, maxCount, tagColor, glassColors)
-                            if (index < minOf(3, mistakeTags.size - 1)) Spacer(modifier = Modifier.height(10.dp))
-                        }
+                Column {
+                    mistakeTags.take(4).forEachIndexed { index, (tag, count) ->
+                        MistakeBar(tag, count, maxCount, tagColor, glassColors)
+                        if (index < minOf(3, mistakeTags.size - 1)) Spacer(modifier = Modifier.height(10.dp))
                     }
                 }
             } else {
@@ -1219,7 +1263,7 @@ private fun TimePerformanceChartCard(solves: List<Solve>, hazeState: HazeState, 
         Column {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
-                    imageVector = Icons.Default.AccessTime,
+                    imageVector = Icons.Default.Timeline,
                     contentDescription = "Time Performance",
                     tint = glassColors.textPrimary,
                     modifier = Modifier.size(20.dp)
@@ -1315,6 +1359,188 @@ private fun TimePerformanceChartCard(solves: List<Solve>, hazeState: HazeState, 
                 ) {
                     Text(
                         text = "No time data available",
+                        color = glassColors.textSecondary,
+                        fontSize = 14.sp
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SolvingHoursCard(solves: List<Solve>, hazeState: HazeState, glassColors: GlassColors) {
+    // Parse solves and group by hour
+    val hourlyData = remember(solves) {
+        val hourCounts = mutableMapOf<Int, Int>()
+        val hourTimes = mutableMapOf<Int, MutableList<Int>>()
+        
+        solves.forEach { solve ->
+            try {
+                val instant = Instant.parse(solve.solvedAt)
+                val hour = instant.atZone(java.time.ZoneId.systemDefault()).hour
+                hourCounts[hour] = (hourCounts[hour] ?: 0) + 1
+                solve.submission?.timeTaken?.let { time ->
+                    hourTimes.getOrPut(hour) { mutableListOf() }.add(time)
+                }
+            } catch (e: Exception) { }
+        }
+        
+        (0..23).map { hour ->
+            val count = hourCounts[hour] ?: 0
+            val times = hourTimes[hour] ?: emptyList()
+            val avgTime = if (times.isNotEmpty()) times.average() else 0.0
+            Triple(hour, count, avgTime)
+        }
+    }
+    
+    val peakHour = hourlyData.maxByOrNull { it.second } ?: Triple(0, 0, 0.0)
+    val fastestHour = hourlyData.filter { it.third > 0 }.minByOrNull { it.third }
+    val maxCount = hourlyData.maxOfOrNull { it.second } ?: 1
+    
+    fun formatHour(hour: Int): String {
+        return when {
+            hour == 0 -> "12am"
+            hour < 12 -> "${hour}am"
+            hour == 12 -> "12pm"
+            else -> "${hour - 12}pm"
+        }
+    }
+    
+    fun formatTime(seconds: Double): String {
+        val mins = (seconds / 60).toInt()
+        return if (mins > 0) "${mins}m" else "${seconds.toInt()}s"
+    }
+    
+    val chartColor = glassColors.textPrimary
+    
+    GlassCardContainer(hazeState = hazeState, glassColors = glassColors) {
+        Column {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.AccessTime,
+                    contentDescription = "Solving Hours",
+                    tint = glassColors.textPrimary,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Solving Hours",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = glassColors.textPrimary
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            HorizontalDivider(
+                color = glassColors.textSecondary.copy(alpha = 0.2f),
+                thickness = 1.dp
+            )
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            if (solves.isNotEmpty()) {
+                // Stats Row
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.Top
+                ) {
+                    Column {
+                        Text(
+                            text = formatHour(peakHour.first),
+                            fontSize = 36.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = chartColor
+                        )
+                        Text(
+                            text = "Peak Hour",
+                            fontSize = 13.sp,
+                            color = glassColors.textSecondary
+                        )
+                    }
+                    
+                    if (fastestHour != null) {
+                        Spacer(modifier = Modifier.width(24.dp))
+                        
+                        Box(
+                            modifier = Modifier
+                                .width(1.dp)
+                                .height(50.dp)
+                                .background(glassColors.textSecondary.copy(alpha = 0.3f))
+                        )
+                        
+                        Spacer(modifier = Modifier.width(24.dp))
+                        
+                        Column {
+                            Text(
+                                text = formatHour(fastestHour.first),
+                                fontSize = 24.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = glassColors.textSecondary
+                            )
+                            Text(
+                                text = "Fastest (${formatTime(fastestHour.third)})",
+                                fontSize = 13.sp,
+                                color = glassColors.textSecondary
+                            )
+                        }
+                    }
+                    
+                    Spacer(modifier = Modifier.weight(1f))
+                }
+                
+                Spacer(modifier = Modifier.height(20.dp))
+                
+                // Bar Chart
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(80.dp)
+                ) {
+                    Canvas(modifier = Modifier.fillMaxSize()) {
+                        val barWidth = size.width / 24f * 0.7f
+                        val barSpacing = size.width / 24f
+                        
+                        hourlyData.forEachIndexed { index, (hour, count, _) ->
+                            val barHeight = if (maxCount > 0) (count.toFloat() / maxCount.toFloat()) * size.height * 0.9f else 0f
+                            val x = barSpacing * index + (barSpacing - barWidth) / 2
+                            val y = size.height - barHeight
+                            
+                            val color = if (hour == peakHour.first) chartColor else chartColor.copy(alpha = 0.4f)
+                            
+                            drawRoundRect(
+                                color = color,
+                                topLeft = androidx.compose.ui.geometry.Offset(x, y),
+                                size = androidx.compose.ui.geometry.Size(barWidth, barHeight),
+                                cornerRadius = androidx.compose.ui.geometry.CornerRadius(4f, 4f)
+                            )
+                        }
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                // X-axis labels
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("12am", fontSize = 10.sp, color = glassColors.textSecondary)
+                    Text("6am", fontSize = 10.sp, color = glassColors.textSecondary)
+                    Text("12pm", fontSize = 10.sp, color = glassColors.textSecondary)
+                    Text("6pm", fontSize = 10.sp, color = glassColors.textSecondary)
+                }
+            } else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(120.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "No solve data available",
                         color = glassColors.textSecondary,
                         fontSize = 14.sp
                     )
@@ -1530,7 +1756,14 @@ private fun RecentSolvesCard(
             
             solves.forEachIndexed { index, solve ->
                 RecentSolveItem(solve, glassColors)
-                if (index < solves.lastIndex) Spacer(modifier = Modifier.height(8.dp))
+                if (index < solves.lastIndex) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    HorizontalDivider(
+                        color = glassColors.textSecondary.copy(alpha = 0.15f),
+                        thickness = 1.dp
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                }
             }
         }
     }
@@ -1545,19 +1778,28 @@ private fun RecentSolveItem(solve: RecentSolve, glassColors: GlassColors) {
         else -> glassColors.textSecondary
     }
     
-    GlassSubsection(glassColors = glassColors) {
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(solve.problemName, fontSize = 14.sp, fontWeight = FontWeight.Medium, color = glassColors.textPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Spacer(modifier = Modifier.height(2.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(solve.platform, fontSize = 11.sp, color = glassColors.textSecondary)
-                    Text(" · ", fontSize = 11.sp, color = glassColors.textSecondary)
-                    Text(solve.difficulty, fontSize = 11.sp, fontWeight = FontWeight.Medium, color = difficultyColor)
-                }
+    Row(
+        modifier = Modifier.fillMaxWidth(), 
+        horizontalArrangement = Arrangement.SpaceBetween, 
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = solve.problemName, 
+                fontSize = 14.sp, 
+                fontWeight = FontWeight.Medium, 
+                color = glassColors.textPrimary, 
+                maxLines = 1, 
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(solve.platform, fontSize = 11.sp, color = glassColors.textSecondary)
+                Text(" · ", fontSize = 11.sp, color = glassColors.textSecondary)
+                Text(solve.difficulty, fontSize = 11.sp, fontWeight = FontWeight.Medium, color = difficultyColor)
             }
-            Text(solve.timeAgo, fontSize = 11.sp, color = glassColors.textSecondary)
         }
+        Text(solve.timeAgo, fontSize = 11.sp, color = glassColors.textSecondary)
     }
 }
 

@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AcUnit
 import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -51,7 +52,8 @@ import java.util.Locale
 data class StreakDay(
     val date: LocalDate,
     val isActive: Boolean,  // true = solved problem that day
-    val isToday: Boolean = false
+    val isToday: Boolean = false,
+    val isFrozen: Boolean = false  // true = streak freeze was used that day
 )
 
 @Composable
@@ -195,7 +197,13 @@ fun StreakCalendar(
                     label = "Active",
                     glassColors = glassColors
                 )
-                Spacer(modifier = Modifier.size(20.dp))
+                Spacer(modifier = Modifier.size(16.dp))
+                LegendItem(
+                    color = Color(0xFF4FC3F7),
+                    label = "Frozen",
+                    glassColors = glassColors
+                )
+                Spacer(modifier = Modifier.size(16.dp))
                 LegendItem(
                     color = if (glassColors.isDark) Color(0x30FFFFFF) else Color(0x20000000),
                     label = "Missed",
@@ -233,16 +241,18 @@ private fun CalendarDayCell(
     }
 
     val activeColor = glassColors.textPrimary
+    val freezeColor = Color(0xFF4FC3F7) // Ice blue for frozen days
     val inactiveColor = if (glassColors.isDark) Color(0x25FFFFFF) else Color(0x15000000)
     val todayBorderColor = glassColors.textPrimary
 
     val bgColor = when {
+        day.isFrozen -> freezeColor
         day.isActive -> activeColor
         else -> inactiveColor
     }
 
     val pulseScale by animateFloatAsState(
-        targetValue = if (day.isToday && day.isActive) 1.1f else 1f,
+        targetValue = if (day.isToday && (day.isActive || day.isFrozen)) 1.1f else 1f,
         animationSpec = tween(600, easing = FastOutSlowInEasing),
         label = "pulseScale"
     )
@@ -255,16 +265,16 @@ private fun CalendarDayCell(
             .alpha(alpha.value)
             .clip(RoundedCornerShape(6.dp))
             .background(
-                if (day.isActive && day.isToday) {
+                if ((day.isActive || day.isFrozen) && day.isToday) {
                     Brush.linearGradient(
-                        colors = listOf(activeColor, activeColor)
+                        colors = listOf(bgColor, bgColor)
                     )
                 } else {
                     Brush.linearGradient(colors = listOf(bgColor, bgColor))
                 }
             )
             .then(
-                if (day.isToday && !day.isActive) {
+                if (day.isToday && !day.isActive && !day.isFrozen) {
                     Modifier.background(
                         color = todayBorderColor.copy(alpha = 0.3f),
                         shape = RoundedCornerShape(6.dp)
@@ -273,14 +283,25 @@ private fun CalendarDayCell(
             ),
         contentAlignment = Alignment.Center
     ) {
-        if (day.isActive) {
-            // Small fire icon for active days
-            Icon(
-                imageVector = Icons.Default.LocalFireDepartment,
-                contentDescription = "Active",
-                tint = Color.White.copy(alpha = 0.9f),
-                modifier = Modifier.size(14.dp)
-            )
+        when {
+            day.isFrozen -> {
+                // Ice icon for frozen days
+                Icon(
+                    imageVector = Icons.Default.AcUnit,
+                    contentDescription = "Frozen",
+                    tint = if (glassColors.isDark) Color.Black.copy(alpha = 0.8f) else Color.White.copy(alpha = 0.9f),
+                    modifier = Modifier.size(14.dp)
+                )
+            }
+            day.isActive -> {
+                // Fire icon for active days - use contrasting color
+                Icon(
+                    imageVector = Icons.Default.LocalFireDepartment,
+                    contentDescription = "Active",
+                    tint = if (glassColors.isDark) Color.Black.copy(alpha = 0.8f) else Color.White.copy(alpha = 0.9f),
+                    modifier = Modifier.size(14.dp)
+                )
+            }
         }
     }
 }

@@ -612,10 +612,7 @@ private fun RevisionListItem(
         // For ML mode: no action needed (handled by LSTM)
         if (!isML && !isCompleted) {
             IconButton(
-                onClick = {
-                    isCompleting = true
-                    onComplete()
-                },
+                onClick = { onComplete() },
                 enabled = !isCompleting,
                 modifier = Modifier.size(32.dp)
             ) {
@@ -636,9 +633,7 @@ private fun RevisionListItem(
             }
         }
     }
-}
-
-private fun String.capitalize() = this.replaceFirstChar { 
+}private fun String.capitalize() = this.replaceFirstChar { 
     if (it.isLowerCase()) it.titlecase() else it.toString() 
 }
 

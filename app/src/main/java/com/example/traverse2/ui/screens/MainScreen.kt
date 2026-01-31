@@ -12,7 +12,10 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.background
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -40,6 +43,7 @@ sealed class SubScreen {
     object Streak : SubScreen()
     object Achievements : SubScreen()
     object EditProfile : SubScreen()
+    object FreezeShop : SubScreen()
     data class FriendProfile(val friend: FriendItem) : SubScreen()
 }
 
@@ -106,7 +110,9 @@ fun MainScreen(
                                 totalActiveDays = streakData!!.totalActiveDays,
                                 averagePerWeek = streakData!!.averagePerWeek,
                                 friends = friendsUiState.friends,
-                                streakDays = streakData!!.streakDays
+                                streakDays = streakData!!.streakDays,
+                                bestFriendName = streakData!!.bestFriendName,
+                                bestFriendStreak = streakData!!.bestFriendStreak
                             )
                         }
                     }
@@ -128,6 +134,9 @@ fun MainScreen(
                         onProfileUpdated = {
                             homeViewModel.refresh()
                         }
+                    )
+                    SubScreen.FreezeShop -> FreezeShopScreen(
+                        onBack = { currentSubScreen = SubScreen.None }
                     )
                     SubScreen.None -> {
                         // Main tab content
@@ -160,6 +169,7 @@ fun MainScreen(
                                         achievementsData = data
                                         currentSubScreen = SubScreen.Achievements
                                     },
+                                    friends = friendsUiState.friends,
                                     viewModel = homeViewModel
                                 )
                                 NavItem.REVISIONS -> RevisionsScreen(
@@ -177,12 +187,38 @@ fun MainScreen(
                                     hazeState = hazeState,
                                     onLogout = onLogout,
                                     user = homeUiState.user,
-                                    onEditProfile = { currentSubScreen = SubScreen.EditProfile }
+                                    onEditProfile = { currentSubScreen = SubScreen.EditProfile },
+                                    onFreezeShop = { currentSubScreen = SubScreen.FreezeShop }
                                 )
                             }
                         }
                     }
                 }
+            }
+            
+            // Gradient overlay above navbar for smooth transition
+            AnimatedVisibility(
+                visible = currentSubScreen == SubScreen.None,
+                enter = fadeIn(),
+                exit = fadeOut(),
+                modifier = Modifier.align(Alignment.BottomCenter)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(100.dp)
+                        .background(
+                            brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                                colors = listOf(
+                                    androidx.compose.ui.graphics.Color.Transparent,
+                                    if (com.example.traverse2.ui.theme.TraverseTheme.glassColors.isDark)
+                                        androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.8f)
+                                    else
+                                        androidx.compose.ui.graphics.Color.White.copy(alpha = 0.8f)
+                                )
+                            )
+                        )
+                )
             }
             
             // Bottom navigation bar - only show when not in sub-screen

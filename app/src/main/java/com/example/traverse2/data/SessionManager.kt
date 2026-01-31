@@ -21,6 +21,7 @@ class SessionManager(private val context: Context) {
         private val USER_ID = stringPreferencesKey("user_id")
         private val LAST_SOLVE_TIME = stringPreferencesKey("last_solve_time")
         private val AUTH_TOKEN = stringPreferencesKey("auth_token")
+        private val PROFILE_PIC_URL = stringPreferencesKey("profile_pic_url")
 
         @Volatile
         private var instance: SessionManager? = null
@@ -50,6 +51,20 @@ class SessionManager(private val context: Context) {
 
     val authToken: Flow<String?> = context.dataStore.data.map { preferences ->
         preferences[AUTH_TOKEN]
+    }
+
+    val profilePicUrl: Flow<String?> = context.dataStore.data.map { preferences ->
+        preferences[PROFILE_PIC_URL]
+    }
+
+    suspend fun getProfilePicUrlSync(): String? {
+        return context.dataStore.data.first()[PROFILE_PIC_URL]
+    }
+
+    suspend fun saveProfilePicUrl(url: String) {
+        context.dataStore.edit { preferences ->
+            preferences[PROFILE_PIC_URL] = url
+        }
     }
 
     suspend fun getAuthTokenSync(): String? {

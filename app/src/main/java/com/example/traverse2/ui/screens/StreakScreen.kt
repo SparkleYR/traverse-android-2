@@ -67,7 +67,9 @@ fun StreakScreen(
     totalActiveDays: Int = 0,
     averagePerWeek: Float = 0f,
     friends: List<FriendItem> = emptyList(),
-    streakDays: List<StreakDay> = emptyList()
+    streakDays: List<StreakDay> = emptyList(),
+    bestFriendName: String? = null,
+    bestFriendStreak: Int = 0
 ) {
     val glassColors = TraverseTheme.glassColors
     val scrollState = rememberScrollState()
@@ -108,11 +110,13 @@ fun StreakScreen(
                 .fillMaxSize()
                 .verticalScroll(scrollState)
                 .padding(horizontal = 20.dp)
-                .padding(top = 100.dp, bottom = 120.dp)
+                .padding(top = 120.dp, bottom = 120.dp)
         ) {
             // Current Streak Hero Card
             StreakHeroCard(
                 currentStreak = currentStreak,
+                bestFriendName = bestFriendName,
+                bestFriendStreak = bestFriendStreak,
                 hazeState = hazeState,
                 glassColors = glassColors
             )
@@ -163,6 +167,8 @@ fun StreakScreen(
 @Composable
 private fun StreakHeroCard(
     currentStreak: Int,
+    bestFriendName: String?,
+    bestFriendStreak: Int,
     hazeState: HazeState,
     glassColors: GlassColors
 ) {
@@ -246,6 +252,47 @@ private fun StreakHeroCard(
                 fontSize = 16.sp,
                 color = glassColors.textSecondary
             )
+            
+            // Best friend streak section
+            if (bestFriendName != null && bestFriendStreak > 0) {
+                Spacer(modifier = Modifier.height(20.dp))
+                
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(glassColors.textPrimary.copy(alpha = 0.1f))
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.People,
+                        contentDescription = "Best Friend",
+                        tint = glassColors.textSecondary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = bestFriendName,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = glassColors.textPrimary
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Icon(
+                        imageVector = Icons.Default.LocalFireDepartment,
+                        contentDescription = "Streak",
+                        tint = glassColors.textSecondary,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = "$bestFriendStreak",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = glassColors.textPrimary
+                    )
+                }
+            }
         }
     }
 }
